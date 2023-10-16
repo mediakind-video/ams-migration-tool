@@ -2,56 +2,45 @@
 
 ## Introduction
 
-This project allows for the bulk migration from Azure MediaServices to MKIO, allowing customers to easily migrate assets.
+This project allows for the bulk migration from Azure MediaServices to MKIO, allowing an easy way to migrate assets.
 
 The tool needs access to both Azure and MKIO to export and import resources, respectively.
 
 ## Migration Process
 
-1. Export resources from Azure MediaServices
-   1. Assets
-      1. Get Assets related to the subscription
-      2. Convert Assets list to JSON
-      3. Write JSON to a file
-   2. StreamingLocators
-      1. Get StreamingLocators related to the subscription
-      2. Convert StreamingLocators list into JSON
-      3. Write JSON to a file
+1. Export rsources from Azure Mediaservices as JSON
 2. Import resources into MKIO
-   1. Pre-import validate
-      1. Read assets file
-      2. Loop through assets to get all StorageAccounts
-      3. Validate StorageAccounts exist in MKIO
-   2. Assets
-      1. Read Assets File
-      2. Convert into MKIO Asset type
-      3. Make PUT requests with asset to MKIO
-   3. StreamingLocators
-      1. Read StreamingLocators File
-      2. Convert into MKIO StreamingLocators type
-      3. Make PUT requests with streamingLocator to MKIO
 3. Validate resources in MKIO
-   1. Validate we have a streamingEndpoint
-   2. Get assets in MKIO subscription
-   3. Validate GET to asset Path returns a 200
 
 ## Current State 
-
-It currently supports Assets and Streaming Locators.
 
 The project can run in three modes, which can be combined in one execution. [Export,Import,Validate]
 
 Export - Pulls data from Azure MediaServices, creating a JSON file as output
 Import - Reads a json file and inserts data into MKIO
-Validate - TODO
+Validate - Validates imported assets
 
 These modes are currently command-line flags, rather than seperate cobra commands. This gives us the option to run mutliple modes at once, allowing users to run a single command to fully migrate items.
 
+### Supported Resources
+
+This migration tool currently works for the following resources:
+
+- Assets
+- Asset Filters
+- Streaming Endpoints
+- Streaming Locators
+- Content Key Policies
+
 ## Running the migration
+
+## Demo
+
+A detailed demo can be found [here](docs/demo/demo.md)
 
 ### Prerequisites
 
-The migration tool doesn't currently handle Get/Create of StorageAccounts. It expects the same StorageAccount, with the same name, to be in place in both Azure MediaSerivces and MKIO. 
+The migration tool doesn't currently handle Get/Create of StorageAccounts. It expects the same StorageAccount, with the same name, to be in place in both Azure MediaSerivces and MKIO.
 
 #### Setting up StorageAccount in MKIO
 
@@ -107,4 +96,5 @@ Run the following command to build the go binary for linux
 ## Additional Documentation
 
 [MKIO Swagger](https://dev.io.mediakind.com/doc/ui/)
+
 [Azure MediaServices SDK](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices#pkg-types)
