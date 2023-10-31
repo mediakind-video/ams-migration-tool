@@ -6,6 +6,8 @@ This project allows for the bulk migration from Azure Media Services to MKIO, al
 
 The tool needs access to both Azure and MKIO to export and import resources, respectively.
 
+[See also the bulk migration documentation here](https://docs.io.mediakind.com/docs/bulk-asset-migration-from-ams-storage).
+
 ## Migration Process
 
 1. Export resources from Azure Media Services as JSON
