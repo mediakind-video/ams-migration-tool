@@ -23,21 +23,22 @@ The following steps will setup Azure access and select the desired accounts to m
 ### MK/IO
 
 #### Getting Access
+
 1. Using an Incognito or Private Browser
 2. Log into [MKIO UI](https://dev-ui.io.mediakind.com/)
 3. Get the MKIO subscription name from the dropdown in the top pane
     ![mkio_data](demo-mkio-data.png)
-3. Get the login token [MKIO Token](https://dev.io.mediakind.com/auth/token/)
-4. In terminal, export the token as an environment variable
+4. Get the login token [MKIO Token](https://dev.io.mediakind.com/auth/token/)
+5. In terminal, export the token as an environment variable
     `export MKIO_TOKEN="$token_from_step_3"`
 
 ### Manual Updates
 
-At the moment we don't automatically migrate the StorageAccount access, or StreamingEndpoints. These will need to be added manually to MKIO. 
+At the moment we don't automatically migrate the StorageAccount access, or StreamingEndpoints. These will need to be added manually to MKIO.
 
 #### Setup Storage Account
 
-StorageAccount must be in place before the tool runs. 
+StorageAccount must be in place before the tool runs.
 
 1. Log into the Azure Portal's AMS page
 2. Select Settings.Storage Accounts from the side pane
@@ -67,13 +68,13 @@ A streaming Endpoint is needed to output video. Imports will work without this, 
 
 ## Demo
 
-This assumes all of the setup steps above were completed successfully. 
+This assumes all of the setup steps above were completed successfully.
 
 ### Resetting the demo
 
 The script `dev/removeAssets.sh` will delete all assets from the `migration` subscription in MKIO
 
-### Demo Process 
+### Demo Process
 
 I would suggest testing out assets beforehand to make sure you have one that works. I used `liveEvent-test-alex-20230901-192728` for my demo. Ideally the asset should have a StreamingLocator with `Streaming Policy = Predefined_ClearStreamingOnly`.
 
@@ -86,7 +87,7 @@ I would suggest testing out assets beforehand to make sure you have one that wor
 7. Play the sample video of the asset
 
 ### Run the migration
+
 Run the migration using the information gathers in Setup
 
-./mkio-ams-migration --azure-subscription 29628ffc-5d07-4af3-88a8-3f710582a73b --azure-resource-group ams-test --azure-account-name amstest --mediakind-subscription migration --export --import --assets --streaming-locators --asset-filters --content-key-policies --streaming-endpoints 
-
+./mkio-ams-migration --azure-subscription 29628ffc-5d07-4af3-88a8-3f710582a73b --azure-resource-group ams-test --azure-account-name amstest --mediakind-subscription migration --export --import --assets --streaming-locators --asset-filters --content-key-policies --streaming-endpoints
