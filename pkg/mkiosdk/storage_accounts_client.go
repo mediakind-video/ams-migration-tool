@@ -26,11 +26,12 @@ type StorageAccountsClient struct {
 // customerId - The customer ID for the storage account.
 // subscriptionName - The subscription Name for the storage account.
 // token - used to authorize requests.
+// apiEndpoint - used to specify the MKIO API endpoint.
 // options - pass nil to accept the default values.
-func NewStorageAccountsClient(customerId string, subscriptionName string, token string, options *ClientOptions) (*StorageAccountsClient, error) {
+func NewStorageAccountsClient(customerId string, subscriptionName string, token string, apiEndpoint string, options *ClientOptions) (*StorageAccountsClient, error) {
 	if options == nil {
 		options = &ClientOptions{
-			host: "https://dev.io.mediakind.com",
+			host: apiEndpoint,
 		}
 	}
 	hc := &http.Client{}
