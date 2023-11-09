@@ -26,11 +26,12 @@ type StreamingLocatorsClient struct {
 // NewStreamingLocatorsClient creates a new instance of StreamingLocatorsClient with the specified values.
 // subscriptionName - The subscription (project) name for the .
 // token - used to authorize requests. Usually a credential from azidentity.
+// apiEndpoint - used to specify the MKIO API endpoint.
 // options - pass nil to accept the default values.
-func NewStreamingLocatorsClient(subscriptionName string, token string, options *ClientOptions) (*StreamingLocatorsClient, error) {
+func NewStreamingLocatorsClient(subscriptionName string, token string, apiEndpoint string, options *ClientOptions) (*StreamingLocatorsClient, error) {
 	if options == nil {
 		options = &ClientOptions{
-			host: "https://dev.io.mediakind.com",
+			host: apiEndpoint,
 		}
 	}
 	hc := &http.Client{}

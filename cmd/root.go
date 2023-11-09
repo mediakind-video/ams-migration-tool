@@ -20,6 +20,7 @@ var (
 	azAccountName   string
 	mkSubscription  string
 	migrationFile   string
+	apiEndpoint     string
 
 	debug             bool
 	importResources   bool
@@ -150,23 +151,23 @@ var rootCmd = &cobra.Command{
 			}
 
 			// Create Clients
-			assetsClient, err := mkiosdk.NewAssetsClient(mkSubscription, mkToken, nil)
+			assetsClient, err := mkiosdk.NewAssetsClient(mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating MKIO Assets Client: %v", err)
 			}
-			assetFiltersClient, err := mkiosdk.NewAssetFiltersClient(mkSubscription, mkToken, nil)
+			assetFiltersClient, err := mkiosdk.NewAssetFiltersClient(mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating MKIO Asset Filters Client: %v", err)
 			}
-			streamingLocatorsClient, err := mkiosdk.NewStreamingLocatorsClient(mkSubscription, mkToken, nil)
+			streamingLocatorsClient, err := mkiosdk.NewStreamingLocatorsClient(mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating MKIO StreamingLocators Client: %v", err)
 			}
-			streamingEndpointsClient, err := mkiosdk.NewStreamingEndpointsClient(mkSubscription, mkToken, nil)
+			streamingEndpointsClient, err := mkiosdk.NewStreamingEndpointsClient(mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating MKIO StreamingEndpoints Client: %v", err)
 			}
-			contentKeyPoliciesClient, err := mkiosdk.NewContentKeyPoliciesClient(mkSubscription, mkToken, nil)
+			contentKeyPoliciesClient, err := mkiosdk.NewContentKeyPoliciesClient(mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating MKIO ContentKeyPolicies Client: %v", err)
 
@@ -234,11 +235,11 @@ var rootCmd = &cobra.Command{
 			}
 
 			// Create clients
-			streamingLocatorsClient, err := mkiosdk.NewStreamingLocatorsClient(mkSubscription, mkToken, nil)
+			streamingLocatorsClient, err := mkiosdk.NewStreamingLocatorsClient(mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating MKIO StreamingLocators Client: %v", err)
 			}
-			streamingEndpointsClient, err := mkiosdk.NewStreamingEndpointsClient(mkSubscription, mkToken, nil)
+			streamingEndpointsClient, err := mkiosdk.NewStreamingEndpointsClient(mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating MKIO StreamingEndpoints Client: %v", err)
 			}
@@ -272,6 +273,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&azResourceGroup, "azure-resource-group", "", "Resource Group for existing AMS")
 	rootCmd.PersistentFlags().StringVar(&azAccountName, "azure-account-name", "", "Account Name for existing AMS")
 	rootCmd.PersistentFlags().StringVar(&mkSubscription, "mediakind-subscription", "", "Mediakind Subscription ID for MKIO")
+	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "https://api.io.mediakind.com", "MKIO API endpoint")
 
 	rootCmd.PersistentFlags().StringVar(&migrationFile, "migration-file", "", "Migration filename")
 
@@ -286,7 +288,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&contentKeyPolicies, "content-key-policies", false, "Run Export/Import on ContentKeyPolicies")
 	rootCmd.PersistentFlags().BoolVar(&streamingLocators, "streaming-locators", false, "run Export/Import on StreamingLocators")
 	rootCmd.PersistentFlags().BoolVar(&streamingEndpoints, "streaming-endpoints", false, "run Export/Import on StreamingEndpoints")
-
+		
 	// Configure Logger
 	// log.SetFormatter(&log.JSONFormatter{})
 

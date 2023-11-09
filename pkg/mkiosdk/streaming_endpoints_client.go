@@ -25,12 +25,13 @@ type StreamingEndpointsClient struct {
 
 // NewStreamingEndpointsClient creates a new instance of StreamingEndpointsClient with the specified values.
 // subscriptionID - The unique identifier for a Microsoft Azure subscription.
-// credential - used to authorize requests. Usually a credential from azidentity.
+// token - used to authorize requests.
+// apiEndpoint - used to specify the MKIO API endpoint.
 // options - pass nil to accept the default values.
-func NewStreamingEndpointsClient(subscriptionName string, token string, options *ClientOptions) (*StreamingEndpointsClient, error) {
+func NewStreamingEndpointsClient(subscriptionName string, token string, apiEndpoint string, options *ClientOptions) (*StreamingEndpointsClient, error) {
 	if options == nil {
 		options = &ClientOptions{
-			host: "https://dev.io.mediakind.com",
+			host: apiEndpoint,
 		}
 	}
 	hc := &http.Client{}

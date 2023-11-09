@@ -71,8 +71,8 @@ This is needed for Import and Validation.
 
 The following instructions contain links to the Dev instance of MKIO. Use similar steps for Prod.
 
-1. Log into [MKIO UI](https://dev-ui.io.mediakind.com/)
-2. Get your token (At the moment this only works in an incognito window). [MKIO Token](https://dev.io.mediakind.com/auth/token/)
+1. Log into [MKIO UI](https://app.io.mediakind.com/)
+2. Get your token (At the moment this only works in an incognito window). [MKIO Token](https://api.io.mediakind.com/auth/token/)
 
 ### Running
 
@@ -97,6 +97,6 @@ Run the following command to build the go binary for linux
 
 ## Additional Documentation
 
-[MKIO Swagger](https://dev.io.mediakind.com/doc/ui/)
+[MKIO Swagger](https://api.io.mediakind.com/doc/ui/)
 
 [Azure Media Services SDK](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices#pkg-types)

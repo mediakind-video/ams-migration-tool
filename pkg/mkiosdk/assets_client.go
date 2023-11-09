@@ -25,11 +25,12 @@ type AssetsClient struct {
 // NewAssetsClient creates a new instance of AssetsClient with the specified values.
 // subscriptionName - The subscription (project) name for the .
 // token - used to authorize requests. Usually a credential from azidentity.
+// apiEndpoint - used to specify the MKIO API endpoint.
 // options - pass nil to accept the default values.
-func NewAssetsClient(subscriptionName string, token string, options *ClientOptions) (*AssetsClient, error) {
+func NewAssetsClient(subscriptionName string, token string, apiEndpoint string, options *ClientOptions) (*AssetsClient, error) {
 	if options == nil {
 		options = &ClientOptions{
-			host: "https://dev.io.mediakind.com",
+			host: apiEndpoint,
 		}
 	}
 	hc := &http.Client{}
