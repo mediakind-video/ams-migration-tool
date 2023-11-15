@@ -68,7 +68,59 @@ var rootCmd = &cobra.Command{
 
 		migrationContents := migrate.MigrationFileContents{}
 
-		// Export from AMS
+		// Login to Azure for the export
+		var azureClient *migrate.AzureServiceProvider
+		if exportResources {
+			log.Info("Logging into Azure")
+			var err error
+			azureClient, err = migrate.NewAzureServiceProvider(azSubscription, azResourceGroup, azAccountName)
+			if err != nil {
+				log.Fatalf("unable to log into Azure: %v", err)
+			}
+
+		}
+
+		// Log into MKIO for the Import. Do this first so we know if it fails before we do any work.
+		var mkAssetsClient *mkiosdk.AssetsClient
+		var mkAssetFiltersClient *mkiosdk.AssetFiltersClient
+		var mkStreamingLocatorsClient *mkiosdk.StreamingLocatorsClient
+		var mkStreamingEndpointsClient *mkiosdk.StreamingEndpointsClient
+		var mkContentKeyPoliciesClient *mkiosdk.ContentKeyPoliciesClient
+
+		if importResources {
+			log.Info("Logging into MK/IO")
+			var err error
+
+			mkToken := os.Getenv("MKIO_TOKEN")
+			if mkToken == "" {
+				log.Fatalf("import Error: could not find MKIO_TOKEN environment variable")
+			}
+
+			// Create Clients
+			mkAssetsClient, err = mkiosdk.NewAssetsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			if err != nil {
+				log.Fatalf("error creating MKIO Assets Client: %v", err)
+			}
+			mkAssetFiltersClient, err = mkiosdk.NewAssetFiltersClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			if err != nil {
+				log.Fatalf("error creating MKIO Asset Filters Client: %v", err)
+			}
+			mkStreamingLocatorsClient, err = mkiosdk.NewStreamingLocatorsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			if err != nil {
+				log.Fatalf("error creating MKIO StreamingLocators Client: %v", err)
+			}
+			mkStreamingEndpointsClient, err = mkiosdk.NewStreamingEndpointsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			if err != nil {
+				log.Fatalf("error creating MKIO StreamingEndpoints Client: %v", err)
+			}
+			mkContentKeyPoliciesClient, err = mkiosdk.NewContentKeyPoliciesClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			if err != nil {
+				log.Fatalf("error creating MKIO ContentKeyPolicies Client: %v", err)
+
+			}
+		}
+
+		// Read from Azure and generate an output file w/ the proper resources.
 		if exportResources {
 			// A couple of simple checks to avoid bad things
 			if assetFilters && !assets {
@@ -76,15 +128,10 @@ var rootCmd = &cobra.Command{
 			}
 
 			log.Info("Starting Export from Azure")
-			// Read from Azure and generate an output file w/ the proper resources.
-			client, err := migrate.NewAzureServiceProvider(azSubscription, azResourceGroup, azAccountName)
-			if err != nil {
-				log.Fatalf("unable to log into Azure: %v", err)
-			}
 
 			// Handle Assets
 			if assets {
-				assetList, err := migrate.ExportAssets(ctx, client)
+				assetList, err := migrate.ExportAssets(ctx, azureClient)
 				if err != nil {
 					log.Errorf("error exporting assets: %v", err)
 				}
@@ -93,7 +140,7 @@ var rootCmd = &cobra.Command{
 
 				// Handle Asset Filters -- Can only do this if we have a list of assets
 				if assetFilters {
-					assetFiltersList, err := migrate.ExportAssetFilters(ctx, client, assetList)
+					assetFiltersList, err := migrate.ExportAssetFilters(ctx, azureClient, assetList)
 					if err != nil {
 						log.Errorf("error exporting asset filters: %v", err)
 					}
@@ -105,7 +152,7 @@ var rootCmd = &cobra.Command{
 
 			// Handle StreamingLocators.
 			if streamingLocators {
-				streamingLocatorsList, err := migrate.ExportStreamingLocators(ctx, client)
+				streamingLocatorsList, err := migrate.ExportStreamingLocators(ctx, azureClient)
 				if err != nil {
 					log.Errorf("error exporting streaming locators: %v", err)
 				}
@@ -115,7 +162,7 @@ var rootCmd = &cobra.Command{
 
 			// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
 			if streamingEndpoints {
-				se, err := migrate.ExportStreamingEndpoints(ctx, client)
+				se, err := migrate.ExportStreamingEndpoints(ctx, azureClient)
 				if err != nil {
 					log.Errorf("error exporting streaming locators: %v", err)
 				}
@@ -125,14 +172,14 @@ var rootCmd = &cobra.Command{
 
 			// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
 			if contentKeyPolicies {
-				ckp, err := migrate.ExportContentKeyPolicies(ctx, client)
+				ckp, err := migrate.ExportContentKeyPolicies(ctx, azureClient)
 				if err != nil {
 					log.Errorf("error exporting content key policies: %v", err)
 				}
 				migrationContents.ContentKeyPolicies = ckp
 			}
 
-			err = migrationContents.WriteMigrationFile(ctx, migrationFile)
+			err := migrationContents.WriteMigrationFile(ctx, migrationFile)
 			if err != nil {
 				// No point continuing w/o this file... Exit
 				log.Fatalf("unable to write migration export file contents: %v", err)
@@ -145,60 +192,31 @@ var rootCmd = &cobra.Command{
 		if importResources {
 			log.Info("Starting Import to MK/IO")
 
-			mkToken := os.Getenv("MKIO_TOKEN")
-			if mkToken == "" {
-				log.Fatalf("import Error: could not find MKIO_TOKEN environment variable")
-			}
-
-			// Create Clients
-			assetsClient, err := mkiosdk.NewAssetsClient(mkSubscription, mkToken, apiEndpoint, nil)
-			if err != nil {
-				log.Fatalf("error creating MKIO Assets Client: %v", err)
-			}
-			assetFiltersClient, err := mkiosdk.NewAssetFiltersClient(mkSubscription, mkToken, apiEndpoint, nil)
-			if err != nil {
-				log.Fatalf("error creating MKIO Asset Filters Client: %v", err)
-			}
-			streamingLocatorsClient, err := mkiosdk.NewStreamingLocatorsClient(mkSubscription, mkToken, apiEndpoint, nil)
-			if err != nil {
-				log.Fatalf("error creating MKIO StreamingLocators Client: %v", err)
-			}
-			streamingEndpointsClient, err := mkiosdk.NewStreamingEndpointsClient(mkSubscription, mkToken, apiEndpoint, nil)
-			if err != nil {
-				log.Fatalf("error creating MKIO StreamingEndpoints Client: %v", err)
-			}
-			contentKeyPoliciesClient, err := mkiosdk.NewContentKeyPoliciesClient(mkSubscription, mkToken, apiEndpoint, nil)
-			if err != nil {
-				log.Fatalf("error creating MKIO ContentKeyPolicies Client: %v", err)
-
-			}
-
 			// Read migration file & populate migration contents from it
 			contents := migrate.MigrationFileContents{}
-			err = contents.ReadMigrationFile(ctx, migrationFile)
+			err := contents.ReadMigrationFile(ctx, migrationFile)
 			if err != nil {
 				log.Fatalf("could not read migration file: %v", err)
 			}
-
-			// Handling Asset Filters
-			if assetFilters {
-				err := migrate.ImportAssetFilters(ctx, assetFiltersClient, contents.AssetFilters, overwrite)
-				if err != nil {
-					log.Errorf("error importing asset filters: %v", err)
-				}
-			}
-
 			// Handling Assets
 			if assets {
-				err := migrate.ImportAssets(ctx, assetsClient, contents.Assets, overwrite)
+				err := migrate.ImportAssets(ctx, mkAssetsClient, contents.Assets, overwrite)
 				if err != nil {
 					log.Errorf("error importing assets: %v", err)
 				}
 			}
 
+			// Handling Asset Filters. These require an asset, so import after assets
+			if assetFilters {
+				err := migrate.ImportAssetFilters(ctx, mkAssetFiltersClient, contents.AssetFilters, overwrite)
+				if err != nil {
+					log.Errorf("error importing asset filters: %v", err)
+				}
+			}
+
 			// Handling ConentKeyPolicies. This should happen before StreamingLocators
 			if contentKeyPolicies {
-				err := migrate.ImportContentKeyPolicies(ctx, contentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite)
+				err := migrate.ImportContentKeyPolicies(ctx, mkContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite)
 				if err != nil {
 					log.Errorf("error importing content key policies: %v", err)
 				}
@@ -206,14 +224,15 @@ var rootCmd = &cobra.Command{
 
 			// Handling StreamingLocators
 			if streamingLocators {
-				err := migrate.ImportStreamingLocators(ctx, streamingLocatorsClient, contents.StreamingLocators, overwrite)
+				err := migrate.ImportStreamingLocators(ctx, mkStreamingLocatorsClient, contents.StreamingLocators, overwrite)
 				if err != nil {
 					log.Errorf("error importing streaming locators: %v", err)
 				}
 			}
+
 			// Handling StreamingEndpoints
 			if streamingEndpoints {
-				err := migrate.ImportStreamingEndpoints(ctx, streamingEndpointsClient, contents.StreamingEndpoints, overwrite)
+				err := migrate.ImportStreamingEndpoints(ctx, mkStreamingEndpointsClient, contents.StreamingEndpoints, overwrite)
 				if err != nil {
 					log.Errorf("error importing streaming endpoints: %v", err)
 				}
@@ -234,19 +253,9 @@ var rootCmd = &cobra.Command{
 				log.Fatalf("could not read migration file: %v", err)
 			}
 
-			// Create clients
-			streamingLocatorsClient, err := mkiosdk.NewStreamingLocatorsClient(mkSubscription, mkToken, apiEndpoint, nil)
-			if err != nil {
-				log.Fatalf("error creating MKIO StreamingLocators Client: %v", err)
-			}
-			streamingEndpointsClient, err := mkiosdk.NewStreamingEndpointsClient(mkSubscription, mkToken, apiEndpoint, nil)
-			if err != nil {
-				log.Fatalf("error creating MKIO StreamingEndpoints Client: %v", err)
-			}
-
 			// Handling StreamingLocators
 			if streamingLocators {
-				err := migrate.ValidateStreamingLocators(ctx, streamingLocatorsClient, streamingEndpointsClient, contents.StreamingLocators)
+				err := migrate.ValidateStreamingLocators(ctx, mkStreamingLocatorsClient, mkStreamingEndpointsClient, contents.StreamingLocators)
 				if err != nil {
 					log.Errorf("error validating streamingLocators: %v", err)
 				}
@@ -288,7 +297,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&contentKeyPolicies, "content-key-policies", false, "Run Export/Import on ContentKeyPolicies")
 	rootCmd.PersistentFlags().BoolVar(&streamingLocators, "streaming-locators", false, "run Export/Import on StreamingLocators")
 	rootCmd.PersistentFlags().BoolVar(&streamingEndpoints, "streaming-endpoints", false, "run Export/Import on StreamingEndpoints")
-		
+
 	// Configure Logger
 	// log.SetFormatter(&log.JSONFormatter{})
 

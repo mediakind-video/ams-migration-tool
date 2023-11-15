@@ -28,7 +28,7 @@ type StreamingEndpointsClient struct {
 // token - used to authorize requests.
 // apiEndpoint - used to specify the MKIO API endpoint.
 // options - pass nil to accept the default values.
-func NewStreamingEndpointsClient(subscriptionName string, token string, apiEndpoint string, options *ClientOptions) (*StreamingEndpointsClient, error) {
+func NewStreamingEndpointsClient(ctx context.Context, subscriptionName string, token string, apiEndpoint string, options *ClientOptions) (*StreamingEndpointsClient, error) {
 	if options == nil {
 		options = &ClientOptions{
 			host: apiEndpoint,
@@ -41,8 +41,47 @@ func NewStreamingEndpointsClient(subscriptionName string, token string, apiEndpo
 		token:            token,
 		hc:               hc,
 	}
+	// Test that our token is valid
+	err := client.GetProfile(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return client, nil
 
+}
+
+// GetProfile - Get the Media Services account
+// If the operation fails it returns an error.
+func (client *StreamingEndpointsClient) GetProfile(ctx context.Context) error {
+	req, err := client.getProfileRequest(ctx)
+	if err != nil {
+		return err
+	}
+	resp, err := client.hc.Do(req)
+	if err != nil {
+		return err
+	}
+	if !HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
+		return NewResponseError(resp)
+	}
+	return nil
+}
+
+// getProfileRequest creates the GetProfile request.
+func (client *StreamingEndpointsClient) getProfileRequest(ctx context.Context) (*http.Request, error) {
+	urlPath := "/api/profile"
+	path, err := url.JoinPath(client.host, urlPath)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodPut, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("x-mkio-token", client.token)
+	return req, nil
 }
 
 // CreateOrUpdate - Creates or updates an StreamingEndpoint in the Media Services account
