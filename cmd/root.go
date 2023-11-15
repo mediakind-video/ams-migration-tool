@@ -87,7 +87,8 @@ var rootCmd = &cobra.Command{
 		var mkStreamingEndpointsClient *mkiosdk.StreamingEndpointsClient
 		var mkContentKeyPoliciesClient *mkiosdk.ContentKeyPoliciesClient
 
-		if importResources {
+		// We need a login for import and validate. We should try that early so we don't do work if we can't login.
+		if importResources || validateResources {
 			log.Info("Logging into MK/IO")
 			var err error
 
@@ -239,7 +240,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		// Handle Import into MKIO
+		// Handle Validation of imported Streaming Locators/Endpoints
 		if validateResources {
 			mkToken := os.Getenv("MKIO_TOKEN")
 			if mkToken == "" {
