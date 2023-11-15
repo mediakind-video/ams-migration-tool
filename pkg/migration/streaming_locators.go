@@ -62,12 +62,6 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 		// We don't have an existing resource... We can create one
 		log.Debugf("Creating StreamingLocator in MKIO: %v", *sl.Name)
 
-		// TODO add this back in. It isn't working
-		sl.Properties.EndTime = nil
-
-		// Clear out generated data
-		sl.Properties.StreamingLocatorID = nil
-
 		_, err = client.CreateOrUpdate(ctx, *sl.Name, *sl, nil)
 		if err != nil {
 			failedSL = append(failedSL, *sl.Name)
