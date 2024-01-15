@@ -16,10 +16,7 @@ import (
 // ContentKeyPoliciesClient contains the methods for the ContentKeyPolicies group.
 // Don't use this type directly, use NewContentKeyPoliciesClient() instead.
 type ContentKeyPoliciesClient struct {
-	host             string
-	subscriptionName string
-	token            string
-	hc               *http.Client
+	MkioClient
 }
 
 // NewContentKeyPoliciesClient creates a new instance of ContentKeyPoliciesClient with the specified values.
@@ -35,10 +32,12 @@ func NewContentKeyPoliciesClient(ctx context.Context, subscriptionName string, t
 	}
 	hc := &http.Client{}
 	client := &ContentKeyPoliciesClient{
-		subscriptionName: subscriptionName,
-		host:             options.host,
-		token:            token,
-		hc:               hc,
+		MkioClient{
+			subscriptionName: subscriptionName,
+			host:             options.host,
+			token:            token,
+			hc:               hc,
+		},
 	}
 	// Test that our token is valid
 	err := client.GetProfile(ctx)
@@ -47,39 +46,6 @@ func NewContentKeyPoliciesClient(ctx context.Context, subscriptionName string, t
 	}
 
 	return client, nil
-}
-
-// GetProfile - Get the Media Services account
-// If the operation fails it returns an error.
-func (client *ContentKeyPoliciesClient) GetProfile(ctx context.Context) error {
-	req, err := client.getProfileRequest(ctx)
-	if err != nil {
-		return err
-	}
-	resp, err := client.hc.Do(req)
-	if err != nil {
-		return err
-	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
-		return NewResponseError(resp)
-	}
-	return nil
-}
-
-// getProfileRequest creates the GetProfile request.
-func (client *ContentKeyPoliciesClient) getProfileRequest(ctx context.Context) (*http.Request, error) {
-	urlPath := "/api/profile"
-	path, err := url.JoinPath(client.host, urlPath)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequest(http.MethodPut, path, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
 }
 
 // CreateOrUpdate - Creates or updates an ContentKeyPolicy in the Media Services account
@@ -92,13 +58,13 @@ func (client *ContentKeyPoliciesClient) CreateOrUpdate(ctx context.Context, cont
 	if err != nil {
 		return armmediaservices.ContentKeyPoliciesClientCreateOrUpdateResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
 		return armmediaservices.ContentKeyPoliciesClientCreateOrUpdateResponse{}, err
 	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
-		return armmediaservices.ContentKeyPoliciesClientCreateOrUpdateResponse{}, NewResponseError(resp)
-	}
+
 	return client.createOrUpdateHandleResponse(resp)
 }
 
@@ -150,13 +116,12 @@ func (client *ContentKeyPoliciesClient) Delete(ctx context.Context, contentKeyPo
 	if err != nil {
 		return armmediaservices.ContentKeyPoliciesClientDeleteResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+	// Try to do request, handle retries if tooManyRequests
+	_, err = client.DoRequestWithBackoff(req)
 	if err != nil {
 		return armmediaservices.ContentKeyPoliciesClientDeleteResponse{}, err
 	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusNoContent) {
-		return armmediaservices.ContentKeyPoliciesClientDeleteResponse{}, NewResponseError(resp)
-	}
+
 	return armmediaservices.ContentKeyPoliciesClientDeleteResponse{}, nil
 }
 
@@ -192,13 +157,13 @@ func (client *ContentKeyPoliciesClient) Get(ctx context.Context, contentKeyPolic
 	if err != nil {
 		return armmediaservices.ContentKeyPoliciesClientGetResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
 		return armmediaservices.ContentKeyPoliciesClientGetResponse{}, err
 	}
-	if !HasStatusCode(resp, http.StatusOK) {
-		return armmediaservices.ContentKeyPoliciesClientGetResponse{}, NewResponseError(resp)
-	}
+
 	return client.getHandleResponse(resp)
 }
 

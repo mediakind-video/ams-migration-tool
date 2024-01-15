@@ -17,10 +17,7 @@ import (
 // StreamingLocatorsClient contains the methods for the StreamingLocators group.
 // Don't use this type directly, use NewStreamingLocatorsClient() instead.
 type StreamingLocatorsClient struct {
-	host             string
-	subscriptionName string
-	token            string
-	hc               *http.Client
+	MkioClient
 }
 
 // NewStreamingLocatorsClient creates a new instance of StreamingLocatorsClient with the specified values.
@@ -36,10 +33,12 @@ func NewStreamingLocatorsClient(ctx context.Context, subscriptionName string, to
 	}
 	hc := &http.Client{}
 	client := &StreamingLocatorsClient{
-		subscriptionName: subscriptionName,
-		host:             options.host,
-		token:            token,
-		hc:               hc,
+		MkioClient{
+			subscriptionName: subscriptionName,
+			host:             options.host,
+			token:            token,
+			hc:               hc,
+		},
 	}
 	// Test that our token is valid
 	err := client.GetProfile(ctx)
@@ -48,39 +47,6 @@ func NewStreamingLocatorsClient(ctx context.Context, subscriptionName string, to
 	}
 
 	return client, nil
-}
-
-// GetProfile - Get the Media Services account
-// If the operation fails it returns an error.
-func (client *StreamingLocatorsClient) GetProfile(ctx context.Context) error {
-	req, err := client.getProfileRequest(ctx)
-	if err != nil {
-		return err
-	}
-	resp, err := client.hc.Do(req)
-	if err != nil {
-		return err
-	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
-		return NewResponseError(resp)
-	}
-	return nil
-}
-
-// getProfileRequest creates the GetProfile request.
-func (client *StreamingLocatorsClient) getProfileRequest(ctx context.Context) (*http.Request, error) {
-	urlPath := "/api/profile"
-	path, err := url.JoinPath(client.host, urlPath)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequest(http.MethodPut, path, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
 }
 
 // CreateOrUpdate - Creates or updates an StreamingLocators in the Media Services account
@@ -93,12 +59,11 @@ func (client *StreamingLocatorsClient) CreateOrUpdate(ctx context.Context, strea
 	if err != nil {
 		return armmediaservices.StreamingLocatorsClientCreateResponse{}, fmt.Errorf("unable to generate Create/Update request: %v", err)
 	}
-	resp, err := client.hc.Do(req)
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
+		// We hit some error we and failed retry loop. Return error
 		return armmediaservices.StreamingLocatorsClientCreateResponse{}, err
-	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
-		return armmediaservices.StreamingLocatorsClientCreateResponse{}, NewResponseError(resp)
 	}
 	return client.createOrUpdateHandleResponse(resp)
 }
@@ -152,12 +117,11 @@ func (client *StreamingLocatorsClient) Delete(ctx context.Context, streamingLoca
 	if err != nil {
 		return armmediaservices.AssetsClientDeleteResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+	// Try to do request, handle retries if tooManyRequests
+	_, err = client.DoRequestWithBackoff(req)
 	if err != nil {
+		// We hit some error we and failed retry loop. Return error
 		return armmediaservices.AssetsClientDeleteResponse{}, err
-	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusNoContent) {
-		return armmediaservices.AssetsClientDeleteResponse{}, NewResponseError(resp)
 	}
 	return armmediaservices.AssetsClientDeleteResponse{}, nil
 }
@@ -193,12 +157,11 @@ func (client *StreamingLocatorsClient) Get(ctx context.Context, streamingLocator
 	if err != nil {
 		return armmediaservices.StreamingLocatorsClientGetResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
+		// We hit some error we and failed retry loop. Return error
 		return armmediaservices.StreamingLocatorsClientGetResponse{}, err
-	}
-	if !HasStatusCode(resp, http.StatusOK) {
-		return armmediaservices.StreamingLocatorsClientGetResponse{}, NewResponseError(resp)
 	}
 	return client.getHandleResponse(resp)
 }
@@ -248,13 +211,13 @@ func (client *StreamingLocatorsClient) ListPaths(ctx context.Context, streamingL
 	if err != nil {
 		return armmediaservices.StreamingLocatorsClientListPathsResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
+		// We hit some error we and failed retry loop. Return error
 		return armmediaservices.StreamingLocatorsClientListPathsResponse{}, err
 	}
-	if !HasStatusCode(resp, http.StatusOK) {
-		return armmediaservices.StreamingLocatorsClientListPathsResponse{}, NewResponseError(resp)
-	}
+
 	return client.listPathsHandleResponse(resp)
 }
 

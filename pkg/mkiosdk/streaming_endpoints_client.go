@@ -17,10 +17,7 @@ import (
 // StreamingEndpointsClient contains the methods for the StreamingEndpoints group.
 // Don't use this type directly, use NewStreamingEndpointsClient() instead.
 type StreamingEndpointsClient struct {
-	host             string
-	subscriptionName string
-	token            string
-	hc               *http.Client
+	MkioClient
 }
 
 // NewStreamingEndpointsClient creates a new instance of StreamingEndpointsClient with the specified values.
@@ -36,10 +33,12 @@ func NewStreamingEndpointsClient(ctx context.Context, subscriptionName string, t
 	}
 	hc := &http.Client{}
 	client := &StreamingEndpointsClient{
-		subscriptionName: subscriptionName,
-		host:             options.host,
-		token:            token,
-		hc:               hc,
+		MkioClient{
+			subscriptionName: subscriptionName,
+			host:             options.host,
+			token:            token,
+			hc:               hc,
+		},
 	}
 	// Test that our token is valid
 	err := client.GetProfile(ctx)
@@ -49,39 +48,6 @@ func NewStreamingEndpointsClient(ctx context.Context, subscriptionName string, t
 
 	return client, nil
 
-}
-
-// GetProfile - Get the Media Services account
-// If the operation fails it returns an error.
-func (client *StreamingEndpointsClient) GetProfile(ctx context.Context) error {
-	req, err := client.getProfileRequest(ctx)
-	if err != nil {
-		return err
-	}
-	resp, err := client.hc.Do(req)
-	if err != nil {
-		return err
-	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
-		return NewResponseError(resp)
-	}
-	return nil
-}
-
-// getProfileRequest creates the GetProfile request.
-func (client *StreamingEndpointsClient) getProfileRequest(ctx context.Context) (*http.Request, error) {
-	urlPath := "/api/profile"
-	path, err := url.JoinPath(client.host, urlPath)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequest(http.MethodPut, path, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
 }
 
 // CreateOrUpdate - Creates or updates an StreamingEndpoint in the Media Services account
@@ -94,12 +60,12 @@ func (client *StreamingEndpointsClient) CreateOrUpdate(ctx context.Context, stre
 	if err != nil {
 		return armmediaservices.StreamingEndpointsClientCreateResponse{}, fmt.Errorf("unable to generate Create/Update request: %v", err)
 	}
-	resp, err := client.hc.Do(req)
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
+		// We hit some error we and failed retry loop. Return error
 		return armmediaservices.StreamingEndpointsClientCreateResponse{}, err
-	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
-		return armmediaservices.StreamingEndpointsClientCreateResponse{}, NewResponseError(resp)
+
 	}
 	return client.createOrUpdateHandleResponse(resp)
 }
@@ -152,12 +118,11 @@ func (client *StreamingEndpointsClient) Get(ctx context.Context, streamingEndpoi
 	if err != nil {
 		return armmediaservices.StreamingEndpointsClientGetResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
+		// We hit some error we and failed retry loop. Return error
 		return armmediaservices.StreamingEndpointsClientGetResponse{}, err
-	}
-	if !HasStatusCode(resp, http.StatusOK) {
-		return armmediaservices.StreamingEndpointsClientGetResponse{}, NewResponseError(resp)
 	}
 	return client.getHandleResponse(resp)
 }
@@ -205,12 +170,11 @@ func (client *StreamingEndpointsClient) List(ctx context.Context, options *armme
 	if err != nil {
 		return armmediaservices.StreamingEndpointsClientListResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
+		// We hit some error we and failed retry loop. Return error
 		return armmediaservices.StreamingEndpointsClientListResponse{}, err
-	}
-	if !HasStatusCode(resp, http.StatusOK) {
-		return armmediaservices.StreamingEndpointsClientListResponse{}, NewResponseError(resp)
 	}
 	return client.listHandleResponse(resp)
 }
@@ -259,13 +223,14 @@ func (client *StreamingEndpointsClient) Delete(ctx context.Context, streamingEnd
 	if err != nil {
 		return armmediaservices.AssetsClientDeleteResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+
+	// Try to do request, handle retries if tooManyRequests
+	_, err = client.DoRequestWithBackoff(req)
 	if err != nil {
+		// We hit some error we and failed retry loop. Return error
 		return armmediaservices.AssetsClientDeleteResponse{}, err
 	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusNoContent) {
-		return armmediaservices.AssetsClientDeleteResponse{}, NewResponseError(resp)
-	}
+
 	return armmediaservices.AssetsClientDeleteResponse{}, nil
 }
 
