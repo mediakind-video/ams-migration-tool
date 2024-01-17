@@ -20,13 +20,15 @@ type ClientOptions struct {
 	host string
 }
 
-// Do backoff to handle rate limiting
+// Do backoff to handle rate limiting. Rate limit should last about 1 minute. This is over 2 minutes, so we should be good
 var backoffSchedule = []time.Duration{
 	1 * time.Second,
-	2 * time.Second,
-	3 * time.Second,
 	5 * time.Second,
 	10 * time.Second,
+	15 * time.Second,
+	25 * time.Second,
+	30 * time.Second,
+	45 * time.Second,
 }
 
 // GetProfile - Get the Media Services account
