@@ -16,10 +16,7 @@ import (
 // AssetsClient contains the methods for the Assets group.
 // Don't use this type directly, use NewAssetsClient() instead.
 type AssetsClient struct {
-	host             string
-	subscriptionName string
-	token            string
-	hc               *http.Client
+	MkioClient
 }
 
 // NewAssetsClient creates a new instance of AssetsClient with the specified values.
@@ -34,11 +31,12 @@ func NewAssetsClient(ctx context.Context, subscriptionName string, token string,
 		}
 	}
 	hc := &http.Client{}
-	client := &AssetsClient{
+	client := &AssetsClient{MkioClient{
 		subscriptionName: subscriptionName,
 		host:             options.host,
 		token:            token,
 		hc:               hc,
+	},
 	}
 
 	// Test that our token is valid
@@ -48,39 +46,6 @@ func NewAssetsClient(ctx context.Context, subscriptionName string, token string,
 	}
 
 	return client, nil
-}
-
-// GetProfile - Get the Media Services account
-// If the operation fails it returns an error.
-func (client *AssetsClient) GetProfile(ctx context.Context) error {
-	req, err := client.getProfileRequest(ctx)
-	if err != nil {
-		return err
-	}
-	resp, err := client.hc.Do(req)
-	if err != nil {
-		return err
-	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
-		return NewResponseError(resp)
-	}
-	return nil
-}
-
-// getProfileRequest creates the GetProfile request.
-func (client *AssetsClient) getProfileRequest(ctx context.Context) (*http.Request, error) {
-	urlPath := "/api/profile"
-	path, err := url.JoinPath(client.host, urlPath)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequest(http.MethodPut, path, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
 }
 
 // CreateOrUpdate - Creates or updates an Asset in the Media Services account
@@ -93,13 +58,13 @@ func (client *AssetsClient) CreateOrUpdate(ctx context.Context, assetName string
 	if err != nil {
 		return armmediaservices.AssetsClientCreateOrUpdateResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
 		return armmediaservices.AssetsClientCreateOrUpdateResponse{}, err
 	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
-		return armmediaservices.AssetsClientCreateOrUpdateResponse{}, NewResponseError(resp)
-	}
+
 	return client.createOrUpdateHandleResponse(resp)
 }
 
@@ -151,13 +116,13 @@ func (client *AssetsClient) Delete(ctx context.Context, assetName string, option
 	if err != nil {
 		return armmediaservices.AssetsClientDeleteResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+
+	// Try to do request, handle retries if tooManyRequests
+	_, err = client.DoRequestWithBackoff(req)
 	if err != nil {
 		return armmediaservices.AssetsClientDeleteResponse{}, err
 	}
-	if !HasStatusCode(resp, http.StatusOK, http.StatusNoContent) {
-		return armmediaservices.AssetsClientDeleteResponse{}, NewResponseError(resp)
-	}
+
 	return armmediaservices.AssetsClientDeleteResponse{}, nil
 }
 
@@ -193,13 +158,13 @@ func (client *AssetsClient) Get(ctx context.Context, assetName string, options *
 	if err != nil {
 		return armmediaservices.AssetsClientGetResponse{}, err
 	}
-	resp, err := client.hc.Do(req)
+
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
 	if err != nil {
 		return armmediaservices.AssetsClientGetResponse{}, err
 	}
-	if !HasStatusCode(resp, http.StatusOK) {
-		return armmediaservices.AssetsClientGetResponse{}, NewResponseError(resp)
-	}
+
 	return client.getHandleResponse(resp)
 }
 
