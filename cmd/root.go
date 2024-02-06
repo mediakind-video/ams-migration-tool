@@ -199,6 +199,15 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				log.Fatalf("could not read migration file: %v", err)
 			}
+
+			// Handling ConentKeyPolicies. This should happen before StreamingLocators
+			if contentKeyPolicies {
+				err := migrate.ImportContentKeyPolicies(ctx, mkContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite)
+				if err != nil {
+					log.Errorf("error importing content key policies: %v", err)
+				}
+			}
+
 			// Handling Assets
 			if assets {
 				err := migrate.ImportAssets(ctx, mkAssetsClient, contents.Assets, overwrite)
@@ -212,14 +221,6 @@ var rootCmd = &cobra.Command{
 				err := migrate.ImportAssetFilters(ctx, mkAssetFiltersClient, contents.AssetFilters, overwrite)
 				if err != nil {
 					log.Errorf("error importing asset filters: %v", err)
-				}
-			}
-
-			// Handling ConentKeyPolicies. This should happen before StreamingLocators
-			if contentKeyPolicies {
-				err := migrate.ImportContentKeyPolicies(ctx, mkContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite)
-				if err != nil {
-					log.Errorf("error importing content key policies: %v", err)
 				}
 			}
 
