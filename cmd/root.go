@@ -284,7 +284,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&azResourceGroup, "azure-resource-group", "", "Resource Group for existing AMS")
 	rootCmd.PersistentFlags().StringVar(&azAccountName, "azure-account-name", "", "Account Name for existing AMS")
 	rootCmd.PersistentFlags().StringVar(&mkSubscription, "mediakind-subscription", "", "Mediakind Subscription ID for MKIO")
-	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "https://api.io.mediakind.com", "MKIO API endpoint")
+	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "https://api.mk.io", "MKIO API endpoint")
 
 	rootCmd.PersistentFlags().StringVar(&migrationFile, "migration-file", "", "Migration filename")
 
