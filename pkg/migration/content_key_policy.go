@@ -17,7 +17,7 @@ func ExportContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider) (
 	// Lookup ContentKeyPolicies
 	contentKeyPolicies, err := azSp.lookupContentKeyPolicies(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to export ConentKeyPolicies from Azure: %v", err)
+		return contentKeyPolicies, fmt.Errorf("encountered error while exporting ConentKeyPolicies from Azure: %v", err)
 	}
 
 	return contentKeyPolicies, nil

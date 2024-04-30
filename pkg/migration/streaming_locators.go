@@ -18,7 +18,7 @@ func ExportStreamingLocators(ctx context.Context, azSp *AzureServiceProvider) ([
 	// Lookup StreamingLocators
 	sl, err := azSp.lookupStreamingLocators(ctx)
 	if err != nil {
-		return nil, err
+		return sl, fmt.Errorf("encountered error while exporting StreamingLocators From Azure: %v", err)
 	}
 
 	return sl, nil

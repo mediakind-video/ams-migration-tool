@@ -15,15 +15,20 @@ func ExportAssetFilters(ctx context.Context, azSp *AzureServiceProvider, assets 
 	log.Info("Exporting AssetFilters")
 
 	allAssetFilters := map[string][]*armmediaservices.AssetFilter{}
+	skipped := []string{}
 	for _, a := range assets {
 
 		log.Debugf("exporting filters for asset %v", *a.Name)
 		// Lookup AssetFilters
 		assetFilters, err := azSp.lookupAssetFilters(ctx, *a.Name)
 		if err != nil {
-			return nil, err
+			skipped = append(skipped, *a.Name)
 		}
 		allAssetFilters[*a.Name] = assetFilters
+	}
+
+	if len(skipped) > 0 {
+		return allAssetFilters, fmt.Errorf("failed to export %d Asset Filters: %v", len(skipped), skipped)
 	}
 
 	return allAssetFilters, nil

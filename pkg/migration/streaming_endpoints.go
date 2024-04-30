@@ -17,7 +17,7 @@ func ExportStreamingEndpoints(ctx context.Context, azSp *AzureServiceProvider) (
 	// Lookup StreamingEndpoins
 	se, err := azSp.lookupStreamingEndpoints(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get StreamingEndpoints From Azure: %v", err)
+		return se, fmt.Errorf("encountered error while exporting StreamingEndpoints From Azure: %v", err)
 	}
 
 	return se, nil
