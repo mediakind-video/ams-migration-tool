@@ -17,7 +17,7 @@ func ExportAssets(ctx context.Context, azSp *AzureServiceProvider) ([]*armmedias
 	// Lookup Assets
 	assets, err := azSp.lookupAssets(ctx)
 	if err != nil {
-		return nil, err
+		return assets, fmt.Errorf("encountered error while exporting assets from Azure: %v", err)
 	}
 
 	return assets, nil

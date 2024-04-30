@@ -89,7 +89,7 @@ func (a *AzureServiceProvider) lookupAssets(ctx context.Context) ([]*armmediaser
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to advance page: %v", err)
+			return assets, fmt.Errorf("failed to advance page: %v", err)
 		}
 		for _, v := range nextResult.Value {
 			log.Debugf("Id: %s, Name: %s, Type: %s, Container: %s, StorageAccountName: %s, AssetId: %s\n", *v.ID, *v.Name, *v.Type, *v.Properties.Container, *v.Properties.StorageAccountName, *v.Properties.AssetID)
@@ -111,7 +111,7 @@ func (a *AzureServiceProvider) lookupAssetFilters(ctx context.Context, assetName
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to advance page: %v", err)
+			return assetFilters, fmt.Errorf("failed to advance page: %v", err)
 		}
 		for _, v := range nextResult.Value {
 			// log.Debugf("Id: %s, Name: %s, Type: %s, Container: %s, StorageAccountName: %s, AssetId: %s\n", *v.ID, *v.Name, *v.Type, *v.Properties.Container, *v.Properties.StorageAccountName, *v.Properties.AssetID)
@@ -132,7 +132,7 @@ func (a *AzureServiceProvider) lookupStreamingLocators(ctx context.Context) ([]*
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to advance page: %v", err)
+			return sl, fmt.Errorf("failed to advance page: %v", err)
 		}
 		for _, v := range nextResult.Value {
 			log.Debugf("Id: %s, Name: %s, Type: %s, AssetName: %s, StreamingLocatorID: %s, StreamingPolicyName: %s\n", *v.ID, *v.Name, *v.Type, *v.Properties.AssetName, *v.Properties.StreamingLocatorID, *v.Properties.StreamingPolicyName)
@@ -153,7 +153,7 @@ func (a *AzureServiceProvider) lookupStreamingEndpoints(ctx context.Context) ([]
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to advance page: %v", err)
+			return se, fmt.Errorf("failed to advance page: %v", err)
 		}
 		for _, v := range nextResult.Value {
 			log.Debugf("Id: %s, Name: %s, Type: %s, Location: %s\n", *v.ID, *v.Name, *v.Type, *v.Location)
@@ -175,7 +175,7 @@ func (a *AzureServiceProvider) lookupContentKeyPolicies(ctx context.Context) ([]
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to advance page: %v", err)
+			return ckp, fmt.Errorf("failed to advance page: %v", err)
 		}
 		for _, v := range nextResult.Value {
 			// log.Debugf("Id: %s, Name: %s, Type: %s, Container: %s, StorageAccountName: %s, AssetId: %s\n", *v.ID, *v.Name, *v.Type, *v.Properties.Container, *v.Properties.StorageAccountName, *v.Properties.AssetID)
