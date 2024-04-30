@@ -6,7 +6,7 @@ This project allows for the bulk migration from Azure Media Services to MK/IO, a
 
 The tool needs access to both Azure and MK/IO to export and import resources, respectively.
 
-[See also the bulk migration documentation here](https://docs.io.mediakind.com/docs/bulk-asset-migration-from-ams-storage).
+[See also the bulk migration documentation here](https://docs.mk.io/docs/bulk-asset-migration-from-ams-storage).
 
 ## Migration Process
 
@@ -71,8 +71,8 @@ This is needed for Import and Validation.
 
 The following instructions contain links to the Dev instance of MK/IO. Use similar steps for Prod.
 
-1. Log into the [MK/IO app](https://app.io.mediakind.com/)
-2. Get your token (At the moment this only works in an incognito window). [MK/IO Token](https://api.io.mediakind.com/auth/token/)
+1. Log into the [MK/IO app](https://app.mk.io/)
+2. Get your token (At the moment this only works in an incognito window). [MK/IO Token](https://api.mk.io/auth/token/)
 
 ### Running
 
@@ -97,6 +97,6 @@ Run the following command to build the go binary for Linux:
 
 ## Additional Documentation
 
-[MK/IO Swagger](https://api.io.mediakind.com/doc/ui/)
+[MK/IO Swagger](https://api.mk.io/doc/ui/)
 
 [Azure Media Services SDK](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices#pkg-types)

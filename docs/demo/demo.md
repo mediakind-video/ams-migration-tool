@@ -25,10 +25,10 @@ The following steps will setup Azure access and select the desired accounts to m
 #### Getting Access
 
 1. Using an Incognito or Private Browser
-2. Log into [MKIO UI](https://app.io.mediakind.com/)
+2. Log into [MKIO UI](https://app.mk.io/)
 3. Get the MKIO subscription name from the dropdown in the top pane
     ![mkio_data](demo-mkio-data.png)
-4. Get the login token [MKIO Token](https://api.io.mediakind.com/auth/token/)
+4. Get the login token [MKIO Token](https://api.mk.io/auth/token/)
 5. In terminal, export the token as an environment variable
     `export MKIO_TOKEN="$token_from_step_3"`
 
