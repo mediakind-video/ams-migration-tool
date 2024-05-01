@@ -56,11 +56,6 @@ var rootCmd = &cobra.Command{
 			log.Fatal("Please select a valid command: [import|export|validate]")
 		}
 
-		// Leting users select both will overwrite the file... Might be unexpected
-		if exportResources && migrationFile != "" {
-			log.Fatal("Select --export or --migration-file. Selecting both will overwrite your current file.")
-		}
-
 		// Set a timestamp on our migraiton file
 		if migrationFile == "" {
 			migrationFile = fmt.Sprintf("migration-%v.json", time.Now().Unix())
