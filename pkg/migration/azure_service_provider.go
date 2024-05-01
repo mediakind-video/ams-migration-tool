@@ -171,6 +171,7 @@ func (a *AzureServiceProvider) lookupContentKeyPolicies(ctx context.Context) ([]
 
 	ckp := []*armmediaservices.ContentKeyPolicy{}
 
+	ckpFailures := []string{}
 	// We get pages back. Loop through pages and create a list of assets
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
@@ -179,8 +180,19 @@ func (a *AzureServiceProvider) lookupContentKeyPolicies(ctx context.Context) ([]
 		}
 		for _, v := range nextResult.Value {
 			// log.Debugf("Id: %s, Name: %s, Type: %s, Container: %s, StorageAccountName: %s, AssetId: %s\n", *v.ID, *v.Name, *v.Type, *v.Properties.Container, *v.Properties.StorageAccountName, *v.Properties.AssetID)
+			props, err := client.GetPolicyPropertiesWithSecrets(ctx, a.resourceGroup, a.accountName, *v.Name, nil)
+			if err != nil {
+				ckpFailures = append(ckpFailures, *v.Name)
+				continue
+			}
+			v.Properties = &props.ContentKeyPolicyProperties
 			ckp = append(ckp, v)
 		}
+	}
+
+	if len(ckpFailures) > 0 {
+		// Return error after we've looped through all the content key policies
+		return ckp, fmt.Errorf("unable to get content key policy %v", ckpFailures)
 	}
 	return ckp, nil
 }
