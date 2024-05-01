@@ -33,6 +33,7 @@ var (
 	contentKeyPolicies bool
 	streamingLocators  bool
 	streamingEndpoints bool
+	streamingPolicies  bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -79,6 +80,7 @@ var rootCmd = &cobra.Command{
 		var mkAssetsClient *mkiosdk.AssetsClient
 		var mkAssetFiltersClient *mkiosdk.AssetFiltersClient
 		var mkStreamingLocatorsClient *mkiosdk.StreamingLocatorsClient
+		var mkStreamingPoliciesClient *mkiosdk.StreamingPoliciesClient
 		var mkStreamingEndpointsClient *mkiosdk.StreamingEndpointsClient
 		var mkContentKeyPoliciesClient *mkiosdk.ContentKeyPoliciesClient
 
@@ -101,6 +103,10 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				log.Fatalf("error creating MKIO Asset Filters Client: %v", err)
 			}
+			mkStreamingPoliciesClient, err = mkiosdk.NewStreamingPoliciesClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			if err != nil {
+				log.Fatalf("error creating MKIO StreamingPolicies Client: %v", err)
+			}
 			mkStreamingLocatorsClient, err = mkiosdk.NewStreamingLocatorsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating MKIO StreamingLocators Client: %v", err)
@@ -112,7 +118,6 @@ var rootCmd = &cobra.Command{
 			mkContentKeyPoliciesClient, err = mkiosdk.NewContentKeyPoliciesClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating MKIO ContentKeyPolicies Client: %v", err)
-
 			}
 		}
 
@@ -146,6 +151,15 @@ var rootCmd = &cobra.Command{
 				}
 			}
 
+			// Handle Streaming Policies. These are used by StreamingLocators, so do it first
+			if streamingPolicies {
+				sp, err := migrate.ExportStreamingPolicies(ctx, azureClient)
+				if err != nil {
+					log.Errorf("error exporting streaming policies: %v", err)
+				}
+				migrationContents.StreamingPolicies = sp
+			}
+
 			// Handle StreamingLocators.
 			if streamingLocators {
 				streamingLocatorsList, err := migrate.ExportStreamingLocators(ctx, azureClient)
@@ -165,7 +179,6 @@ var rootCmd = &cobra.Command{
 
 				migrationContents.StreamingEndpoints = se
 			}
-
 			// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
 			if contentKeyPolicies {
 				ckp, err := migrate.ExportContentKeyPolicies(ctx, azureClient)
@@ -219,6 +232,13 @@ var rootCmd = &cobra.Command{
 				}
 			}
 
+			// Handling StreamingPolicies
+			if streamingPolicies {
+				err := migrate.ImportStreamingPolicies(ctx, mkStreamingPoliciesClient, contents.StreamingPolicies, overwrite)
+				if err != nil {
+					log.Errorf("error importing streaming policies: %v", err)
+				}
+			}
 			// Handling StreamingLocators
 			if streamingLocators {
 				err := migrate.ImportStreamingLocators(ctx, mkStreamingLocatorsClient, contents.StreamingLocators, overwrite)
@@ -294,6 +314,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&contentKeyPolicies, "content-key-policies", false, "Run Export/Import on ContentKeyPolicies")
 	rootCmd.PersistentFlags().BoolVar(&streamingLocators, "streaming-locators", false, "run Export/Import on StreamingLocators")
 	rootCmd.PersistentFlags().BoolVar(&streamingEndpoints, "streaming-endpoints", false, "run Export/Import on StreamingEndpoints")
+	rootCmd.PersistentFlags().BoolVar(&streamingPolicies, "streaming-policies", false, "run Export/Import on StreamingPolicies")
 
 	// Configure Logger
 	// log.SetFormatter(&log.JSONFormatter{})

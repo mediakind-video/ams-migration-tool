@@ -3,6 +3,7 @@ package migrate
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices"
@@ -20,6 +21,7 @@ type AzureServiceProvider struct {
 	assetFiltersClient       *armmediaservices.AssetFiltersClient
 	streamingLocatorsClient  *armmediaservices.StreamingLocatorsClient
 	streamingEndpointsClient *armmediaservices.StreamingEndpointsClient
+	streamingPoliciesClient  *armmediaservices.StreamingPoliciesClient
 	contentKeyPoliciesClient *armmediaservices.ContentKeyPoliciesClient
 
 	// storageClientFactory *armstorage.ClientFactory
@@ -58,6 +60,11 @@ func NewAzureServiceProvider(subscription string, resourceGroup string, accountN
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Media Service Client: %v", err)
 	}
+	// Get a Azure MediaServices StreamingPolicies Client
+	streamingPoliciesClient, err := armmediaservices.NewStreamingPoliciesClient(subscription, credential, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Azure Media Service Client: %v", err)
+	}
 	accountsClient, err := armstorage.NewAccountsClient(subscription, credential, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create accounts client: %v", err)
@@ -73,6 +80,7 @@ func NewAzureServiceProvider(subscription string, resourceGroup string, accountN
 		streamingEndpointsClient: streamingEndpointsClient,
 		accountsClient:           accountsClient,
 		contentKeyPoliciesClient: contentKeyPoliciesClient,
+		streamingPoliciesClient:  streamingPoliciesClient,
 		credential:               credential,
 	}, nil
 }
@@ -140,6 +148,30 @@ func (a *AzureServiceProvider) lookupStreamingLocators(ctx context.Context) ([]*
 		}
 	}
 	return sl, nil
+}
+
+// lookupStreamingPolicies Get StreamingPolicies from Azure MediaServices. Remove pagination
+func (a *AzureServiceProvider) lookupStreamingPolicies(ctx context.Context) ([]*armmediaservices.StreamingPolicy, error) {
+	client := a.streamingPoliciesClient
+	sp := []*armmediaservices.StreamingPolicy{}
+
+	pager := client.NewListPager(a.resourceGroup, a.accountName, nil)
+
+	// Paginated result. We just need a list. loop through and generate that list
+	for pager.More() {
+		nextResult, err := pager.NextPage(ctx)
+		if err != nil {
+			return sp, fmt.Errorf("failed to advance page: %v", err)
+		}
+		for _, v := range nextResult.Value {
+			// Skip the predefined. They should also be in MKIO
+			if !strings.HasPrefix(*v.Name, "Predefined_") {
+				log.Debugf("Id: %s, Name: %s, Type: %s\n", *v.ID, *v.Name, *v.Type)
+				sp = append(sp, v)
+			}
+		}
+	}
+	return sp, nil
 }
 
 // lookupStreamingEndpoints Get StreamingEndpoints from Azure MediaServices. Remove pagination

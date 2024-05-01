@@ -19,6 +19,7 @@ type MigrationFileContents struct {
 
 	StreamingEndpoints []*armmediaservices.StreamingEndpoint
 	StreamingLocators  []*armmediaservices.StreamingLocator
+	StreamingPolicies  []*armmediaservices.StreamingPolicy
 }
 
 func (contents MigrationFileContents) WriteMigrationFile(ctx context.Context, fileName string) error {
