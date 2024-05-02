@@ -40,7 +40,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Migrate AMS Assets",
-	Long:  `Migrate Assets and StreamingLocators from Azure MediaServices to MKIO.`,
+	Long:  `Migrate Assets and StreamingLocators from Azure MediaServices to mk.io.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
@@ -86,7 +86,7 @@ var rootCmd = &cobra.Command{
 
 		// We need a login for import and validate. We should try that early so we don't do work if we can't login.
 		if importResources || validateResources {
-			log.Info("Logging into MK/IO")
+			log.Info("Logging into mk.io")
 			var err error
 
 			mkToken := os.Getenv("MKIO_TOKEN")
@@ -97,27 +97,27 @@ var rootCmd = &cobra.Command{
 			// Create Clients
 			mkAssetsClient, err = mkiosdk.NewAssetsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
-				log.Fatalf("error creating MKIO Assets Client: %v", err)
+				log.Fatalf("error creating mk.io Assets Client: %v", err)
 			}
 			mkAssetFiltersClient, err = mkiosdk.NewAssetFiltersClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
-				log.Fatalf("error creating MKIO Asset Filters Client: %v", err)
+				log.Fatalf("error creating mk.io Asset Filters Client: %v", err)
 			}
 			mkStreamingPoliciesClient, err = mkiosdk.NewStreamingPoliciesClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
-				log.Fatalf("error creating MKIO StreamingPolicies Client: %v", err)
+				log.Fatalf("error creating mk.io StreamingPolicies Client: %v", err)
 			}
 			mkStreamingLocatorsClient, err = mkiosdk.NewStreamingLocatorsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
-				log.Fatalf("error creating MKIO StreamingLocators Client: %v", err)
+				log.Fatalf("error creating mk.io StreamingLocators Client: %v", err)
 			}
 			mkStreamingEndpointsClient, err = mkiosdk.NewStreamingEndpointsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
-				log.Fatalf("error creating MKIO StreamingEndpoints Client: %v", err)
+				log.Fatalf("error creating mk.io StreamingEndpoints Client: %v", err)
 			}
 			mkContentKeyPoliciesClient, err = mkiosdk.NewContentKeyPoliciesClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
-				log.Fatalf("error creating MKIO ContentKeyPolicies Client: %v", err)
+				log.Fatalf("error creating mk.io ContentKeyPolicies Client: %v", err)
 			}
 		}
 
@@ -197,9 +197,9 @@ var rootCmd = &cobra.Command{
 			log.Infof("Done exporting. Exported content written to file: %s", migrationFile)
 		}
 
-		// Handle Import into MKIO
+		// Handle Import into mk.io
 		if importResources {
-			log.Info("Starting Import to MK/IO")
+			log.Info("Starting Import to mk.io")
 
 			// Read migration file & populate migration contents from it
 			contents := migrate.MigrationFileContents{}
@@ -298,15 +298,15 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&azSubscription, "azure-subscription", "", "Azure Subscription ID for existing AMS")
 	rootCmd.PersistentFlags().StringVar(&azResourceGroup, "azure-resource-group", "", "Resource Group for existing AMS")
 	rootCmd.PersistentFlags().StringVar(&azAccountName, "azure-account-name", "", "Account Name for existing AMS")
-	rootCmd.PersistentFlags().StringVar(&mkSubscription, "mediakind-subscription", "", "Mediakind Subscription ID for MKIO")
-	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "https://api.mk.io", "MKIO API endpoint")
+	rootCmd.PersistentFlags().StringVar(&mkSubscription, "mediakind-subscription", "", "Mediakind Subscription ID for mk.io")
+	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "https://api.mk.io", "mk.io API endpoint")
 
 	rootCmd.PersistentFlags().StringVar(&migrationFile, "migration-file", "", "Migration filename")
 
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().BoolVar(&exportResources, "export", false, "Toggle export from AMS")
-	rootCmd.PersistentFlags().BoolVar(&importResources, "import", false, "Toggle import into MKIO")
-	rootCmd.PersistentFlags().BoolVar(&validateResources, "validate", false, "Toggle validate in MKIO")
+	rootCmd.PersistentFlags().BoolVar(&importResources, "import", false, "Toggle import into mk.io")
+	rootCmd.PersistentFlags().BoolVar(&validateResources, "validate", false, "Toggle validate in mk.io")
 	rootCmd.PersistentFlags().BoolVar(&overwrite, "overwrite", false, "overwrite resources that already exist")
 
 	rootCmd.PersistentFlags().BoolVar(&assets, "assets", false, "Run Export/Import on Assets")

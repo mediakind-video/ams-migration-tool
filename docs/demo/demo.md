@@ -1,4 +1,4 @@
-# Setup and Demo for MKIO
+# Setup and Demo for mk.io
 
 ## Setup
 
@@ -20,21 +20,21 @@ The following steps will setup Azure access and select the desired accounts to m
     2. Navigate to your AMS's overview page to get this data
     3. Example: https://portal.azure.com/#@mediakind.com/resource/subscriptions/29628ffc-5d07-4af3-88a8-3f710582a73b/resourceGroups/ams-test/providers/Microsoft.Media/mediaservices/amstest/overview
 
-### MK/IO
+### mk.io
 
 #### Getting Access
 
 1. Using an Incognito or Private Browser
-2. Log into [MKIO UI](https://app.mk.io/)
-3. Get the MKIO subscription name from the dropdown in the top pane
+2. Log into [mk.io UI](https://app.mk.io/)
+3. Get the mk.io subscription name from the dropdown in the top pane
     ![mkio_data](demo-mkio-data.png)
-4. Get the login token [MKIO Token](https://api.mk.io/auth/token/)
+4. Get the login token [mk.io Token](https://api.mk.io/auth/token/)
 5. In terminal, export the token as an environment variable
     `export MKIO_TOKEN="$token_from_step_3"`
 
 ### Manual Updates
 
-At the moment we don't automatically migrate the StorageAccount access, or StreamingEndpoints. These will need to be added manually to MKIO.
+At the moment we don't automatically migrate the StorageAccount access, or StreamingEndpoints. These will need to be added manually to mk.io.
 
 #### Setup Storage Account
 
@@ -42,7 +42,7 @@ StorageAccount must be in place before the tool runs.
 
 1. Log into the Azure Portal's AMS page
 2. Select Settings.Storage Accounts from the side pane
-3. These storage accounts will need to be added to MKIO before we can run the migration tool
+3. These storage accounts will need to be added to mk.io before we can run the migration tool
 4. For each storage account:
     1. Record the Name
     2. In the storage account select `Security + networking` -> `Shared access signature` from the side pane
@@ -51,17 +51,17 @@ StorageAccount must be in place before the tool runs.
     5. Click on `Generate SAS and connection string` button.
     6. Record the BlobEndpoint in the `Connection string` setting. It should look similar to `https://amstestrns0.blob.core.windows.net/`
     7. Record the entire `SAS token`
-5. Navigate to the appropriate subscription in the MK/IO UI
+5. Navigate to the appropriate subscription in the mk.io UI
 6. Select `Storage Accounts` in the side menu
 7. Select `+ Add Storage Account` on top
 8. Use Information recorded in step 4 to create a storage account.
-    - At the moment this will only work if naming matches exactly between AMS and MKIO
+    - At the moment this will only work if naming matches exactly between AMS and mk.io
 
 #### Setup Streaming Endpoint
 
 A streaming Endpoint is needed to output video. Imports will work without this, but we will not be able to test.
 
-1. Navigate to the appropriate subscription in the MK/IO UI
+1. Navigate to the appropriate subscription in the mk.io UI
 2. Select `Streaming Endpoints` in the side menu
 3. Select `+ Create Streaming Endpoint` on top
 4. Create a streaming Endpoint
@@ -72,7 +72,7 @@ This assumes all of the setup steps above were completed successfully.
 
 ### Resetting the demo
 
-The script `dev/removeAssets.sh` will delete all assets from the `migration` subscription in MKIO
+The script `dev/removeAssets.sh` will delete all assets from the `migration` subscription in mk.io
 
 ### Demo Process
 
@@ -80,9 +80,9 @@ I would suggest testing out assets beforehand to make sure you have one that wor
 
 1. Login to AMS and show the list of assets
 2. Select an asset and play a sample video
-3. Log into MKIO and show an empty list of assets
+3. Log into mk.io and show an empty list of assets
 4. Run the Migration
-5. Show Assets in MKIO
+5. Show Assets in mk.io
 6. Select the same asset as in AMS
 7. Play the sample video of the asset
 
