@@ -25,6 +25,7 @@
                 "--asset-filters",
                 "--streaming-locators",
                 "--streaming-endpoints",
+                "--streaming-policies",
                 "--content-key-policies",
                 // "--migration-file", "migration-test.json",
                 // "--api-endpoint", "https://dev.io.mediakind.com",
