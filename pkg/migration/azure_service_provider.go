@@ -189,6 +189,13 @@ func (a *AzureServiceProvider) lookupStreamingEndpoints(ctx context.Context) ([]
 		}
 		for _, v := range nextResult.Value {
 			log.Debugf("Id: %s, Name: %s, Type: %s, Location: %s\n", *v.ID, *v.Name, *v.Type, *v.Location)
+			// Clean up the exported resource to import properly
+			v.Properties.Created = nil
+			v.Properties.LastModified = nil
+			if !*v.Properties.CdnEnabled {
+				v.Properties.CdnProvider = nil
+				v.Properties.CdnProfile = nil
+			}
 			se = append(se, v)
 		}
 	}
