@@ -60,6 +60,26 @@ func ImportStreamingEndpoints(ctx context.Context, client *mkiosdk.StreamingEndp
 
 		// We don't have an existing resource... We can create one
 		log.Debugf("Creating StreamingEndpoint in MKIO: %v", *se.Name)
+
+		// Location mismatch between Azure and MKIO
+		if *se.Location == "East US" {
+			log.Debugf("Location mismatch for %v. Setting to eastus", *se.Name)
+			eastus := "eastus"
+			se.Location = &eastus
+		}
+
+		// Not supported CDN Provider. Set to Akamai, with user input
+		if se.Properties.CdnProvider != nil && *se.Properties.CdnProvider != "Akamai" {
+			log.Info("CDN Provider mismatch. User input required")
+			var setProvider string
+			fmt.Printf("CDN Provider mismatch for %v. Change to Akamai [y/N]\n", *se.Name)
+			fmt.Scan(&setProvider)
+			if setProvider == "y" || setProvider == "Y" {
+				log.Infof("Setting CDN Provider to StandardAkamai for %v", *se.Name)
+				akamai := "StandardAkamai"
+				se.Properties.CdnProvider = &akamai
+			}
+		}
 		_, err = client.CreateOrUpdate(ctx, *se.Name, *se, nil)
 		if err != nil {
 			failedSE = append(failedSE, *se.Name)
