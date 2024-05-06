@@ -143,6 +143,12 @@ func (a *AzureServiceProvider) lookupStreamingLocators(ctx context.Context) ([]*
 			return sl, fmt.Errorf("failed to advance page: %v", err)
 		}
 		for _, v := range nextResult.Value {
+			contentKeys, err := client.ListContentKeys(ctx, a.resourceGroup, a.accountName, *v.Name, nil)
+			if err != nil {
+				log.Error("Failed to get content keys for streaming locator: ", *v.Name)
+				continue
+			}
+			v.Properties.ContentKeys = contentKeys.ContentKeys
 			log.Debugf("Id: %s, Name: %s, Type: %s, AssetName: %s, StreamingLocatorID: %s, StreamingPolicyName: %s\n", *v.ID, *v.Name, *v.Type, *v.Properties.AssetName, *v.Properties.StreamingLocatorID, *v.Properties.StreamingPolicyName)
 			sl = append(sl, v)
 		}
