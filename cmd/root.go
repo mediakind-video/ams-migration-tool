@@ -117,8 +117,8 @@ var rootCmd = &cobra.Command{
 				log.Fatalf("AssetFilter export requires Asset export")
 			}
 
-			if (azSubscription == "" || azResourceGroup == "" || azAccountName == "") && mkExportSubscription == "" {
-				log.Fatal("export Error: cannot export without Azure or mk.io subscription information")
+			if (azSubscription != "" || azResourceGroup != "" || azAccountName != "") && mkExportSubscription != "" {
+				log.Fatal("export Error: cannot export from both Azure and mk.io subscription")
 			}
 
 			// Handle Azure Export
