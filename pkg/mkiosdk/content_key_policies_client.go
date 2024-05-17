@@ -203,7 +203,7 @@ func (client *ContentKeyPoliciesClient) getHandleResponse(resp *http.Response) (
 	return result, nil
 }
 
-// GetPolicyPropertiesWithSWecrets - Get the details of a ContentKeyPolicy in the Media Services account
+// GetPolicyPropertiesWithSWecrets - Get the details of a ContentKeyPolicy in the mk.io account
 // If the operation fails it returns an *ResponseError type.
 // contentKeyPolicyName - The contentKeyPolicy name.
 // options - ContentKeyPoliciesClientGetOptions contains the optional parameters for the ContentKeyPolicisClient.Get method.
@@ -257,7 +257,7 @@ func (client *ContentKeyPoliciesClient) getWithSecretsHandleResponse(resp *http.
 	return result, nil
 }
 
-// List - List ContentKeyPolicy in the Media Services account
+// List - List ContentKeyPolicy in the mk.io account
 // If the operation fails it returns an *ResponseError type.
 // options - ContentKeyPoliciesClientListOptions contains the optional parameters for the ContentKeyPolicisClient.Get method.
 func (client *ContentKeyPoliciesClient) List(ctx context.Context, options *armmediaservices.ContentKeyPoliciesClientListOptions) (armmediaservices.ContentKeyPoliciesClientListResponse, error) {
@@ -309,7 +309,7 @@ func (client *ContentKeyPoliciesClient) listHandleResponse(resp *http.Response) 
 	return result, nil
 }
 
-// lookupContentKeyPolicies  Get content key policies from Azure mk.io. Remove pagination
+// lookupContentKeyPolicies  Get content key policies from mk.io
 func (client *ContentKeyPoliciesClient) LookupContentKeyPolicies(ctx context.Context) ([]*armmediaservices.ContentKeyPolicy, error) {
 
 	req, err := client.List(ctx, nil)

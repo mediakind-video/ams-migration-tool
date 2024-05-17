@@ -207,7 +207,7 @@ func (client *AssetFiltersClient) getHandleResponse(resp *http.Response) (armmed
 	return result, nil
 }
 
-// lookupAssetFilters  Get asset filters from Azure MediaServices. Remove pagination
+// lookupAssetFilters  Get asset filters from mk.io.
 func (client *AssetFiltersClient) LookupAssetFilters(ctx context.Context, assetName string) ([]*armmediaservices.AssetFilter, error) {
 	assetFilters := []*armmediaservices.AssetFilter{}
 

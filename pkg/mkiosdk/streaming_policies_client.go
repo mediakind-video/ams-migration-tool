@@ -201,7 +201,7 @@ func (client *StreamingPoliciesClient) getHandleResponse(resp *http.Response) (a
 	return result, nil
 }
 
-// List - List Streaming Policy in the Media Services account
+// List - List Streaming Policy in the mk.io account
 // If the operation fails it returns an *ResponseError type.
 // options - StreamingPoliciesClientListOptions contains the optional parameters for the StreamingPoliciesClient.List method.
 func (client *StreamingPoliciesClient) List(ctx context.Context, options *armmediaservices.StreamingPoliciesClientListOptions) (armmediaservices.StreamingPoliciesClientListResponse, error) {
@@ -252,7 +252,7 @@ func (client *StreamingPoliciesClient) listHandleResponse(resp *http.Response) (
 	return result, nil
 }
 
-// lookupStreamingPolicies Get streaming policies from mk.io. Remove pagination
+// lookupStreamingPolicies Get streaming policies from mk.io
 func (client *StreamingPoliciesClient) LookupStreamingPolicies(ctx context.Context) ([]*armmediaservices.StreamingPolicy, error) {
 
 	req, err := client.List(ctx, nil)

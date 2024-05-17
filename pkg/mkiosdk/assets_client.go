@@ -203,7 +203,7 @@ func (client *AssetsClient) getHandleResponse(resp *http.Response) (armmediaserv
 	return result, nil
 }
 
-// List - List Assets in the Media Services account
+// List - List Assets in the mk.io account
 // If the operation fails it returns an *ResponseError type.
 // options - AssetClientGetOptions contains the optional parameters for the AssetClient.Get method.
 func (client *AssetsClient) List(ctx context.Context, options *armmediaservices.AssetsClientListOptions) (armmediaservices.AssetsClientListResponse, error) {
@@ -255,7 +255,7 @@ func (client *AssetsClient) listHandleResponse(resp *http.Response) (armmediaser
 	return result, nil
 }
 
-// lookupAssets  Get assets from Azure MediaServices. Remove pagination
+// lookupAssets  Get assets from mk.io
 func (client *AssetsClient) LookupAssets(ctx context.Context) ([]*armmediaservices.Asset, error) {
 
 	req, err := client.List(ctx, nil)
