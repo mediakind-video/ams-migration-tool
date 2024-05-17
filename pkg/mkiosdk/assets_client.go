@@ -202,3 +202,70 @@ func (client *AssetsClient) getHandleResponse(resp *http.Response) (armmediaserv
 	}
 	return result, nil
 }
+
+// List - List Assets in the Media Services account
+// If the operation fails it returns an *ResponseError type.
+// options - AssetClientGetOptions contains the optional parameters for the AssetClient.Get method.
+func (client *AssetsClient) List(ctx context.Context, options *armmediaservices.AssetsClientListOptions) (armmediaservices.AssetsClientListResponse, error) {
+	req, err := client.listCreateRequest(ctx, options)
+	if err != nil {
+		return armmediaservices.AssetsClientListResponse{}, err
+	}
+
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
+	if err != nil {
+		return armmediaservices.AssetsClientListResponse{}, err
+	}
+
+	return client.listHandleResponse(resp)
+}
+
+// listCreateRequest creates the list request.
+func (client *AssetsClient) listCreateRequest(ctx context.Context, options *armmediaservices.AssetsClientListOptions) (*http.Request, error) {
+	urlPath := "/api/ams/{subscriptionName}/assets"
+	if client.subscriptionName == "" {
+		return nil, errors.New("parameter client.subscriptionName cannot be empty")
+	}
+	urlPath = strings.ReplaceAll(urlPath, "{subscriptionName}", url.PathEscape(client.subscriptionName))
+	path, err := url.JoinPath(client.host, urlPath)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("x-mkio-token", client.token)
+	return req, nil
+}
+
+// listHandleResponse handles the List response.
+func (client *AssetsClient) listHandleResponse(resp *http.Response) (armmediaservices.AssetsClientListResponse, error) {
+	result := armmediaservices.AssetsClientListResponse{}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return armmediaservices.AssetsClientListResponse{}, err
+	}
+	if err := json.Unmarshal(body, &result.AssetCollection); err != nil {
+		return armmediaservices.AssetsClientListResponse{}, err
+	}
+	return result, nil
+}
+
+// lookupAssets  Get assets from Azure MediaServices. Remove pagination
+func (client *AssetsClient) LookupAssets(ctx context.Context) ([]*armmediaservices.Asset, error) {
+
+	req, err := client.List(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	assets := []*armmediaservices.Asset{}
+
+	assets = append(assets, req.AssetCollection.Value...)
+
+	return assets, nil
+}

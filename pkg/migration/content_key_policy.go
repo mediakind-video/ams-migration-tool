@@ -10,14 +10,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ExportContentKeyPolicies creates a file containing all ContentKeyPolicies from an AzureMediaService Subscription
-func ExportContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.ContentKeyPolicy, error) {
+// ExportAzContentKeyPolicies creates a file containing all ContentKeyPolicies from an AzureMediaService Subscription
+func ExportAzContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.ContentKeyPolicy, error) {
 	log.Info("Exporting ContentKeyPolicies")
 
 	// Lookup ContentKeyPolicies
 	contentKeyPolicies, err := azSp.lookupContentKeyPolicies(ctx)
 	if err != nil {
 		return contentKeyPolicies, fmt.Errorf("encountered error while exporting ConentKeyPolicies from Azure: %v", err)
+	}
+
+	return contentKeyPolicies, nil
+}
+
+// ExportMkContentKeyPolicies creates a file containing all ContentKeyPolicies from an mk.io Subscription
+func ExportMkContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyPoliciesClient) ([]*armmediaservices.ContentKeyPolicy, error) {
+	log.Info("Exporting ContentKeyPolicies")
+
+	// Lookup ContentKeyPolicies
+	contentKeyPolicies, err := client.LookupContentKeyPolicies(ctx)
+	if err != nil {
+		return contentKeyPolicies, fmt.Errorf("encountered error while exporting ConentKeyPolicies from mk.io: %v", err)
 	}
 
 	return contentKeyPolicies, nil

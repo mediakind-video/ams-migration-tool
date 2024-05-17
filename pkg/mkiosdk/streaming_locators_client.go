@@ -257,3 +257,74 @@ func (client *StreamingLocatorsClient) listPathsHandleResponse(resp *http.Respon
 	}
 	return result, nil
 }
+
+// List - List Streaming Locators
+// If the operation fails it returns an *ResponseError type.
+// options - StreamingLocatorsClientListOptions contains the optional parameters for the StreamingLocatorsClient.List
+// method.
+func (client *StreamingLocatorsClient) List(ctx context.Context, options *armmediaservices.StreamingLocatorsClientListOptions) (armmediaservices.StreamingLocatorsClientListResponse, error) {
+	req, err := client.listCreateRequest(ctx, options)
+	if err != nil {
+		return armmediaservices.StreamingLocatorsClientListResponse{}, err
+	}
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
+	if err != nil {
+		// We hit some error we and failed retry loop. Return error
+		return armmediaservices.StreamingLocatorsClientListResponse{}, err
+	}
+
+	return client.listHandleResponse(resp)
+}
+
+// listCreateRequest creates the ListPaths request.
+func (client *StreamingLocatorsClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingLocatorsClientListOptions) (*http.Request, error) {
+	urlPath := "/api/ams/{subscriptionName}/streamingLocators"
+	if client.subscriptionName == "" {
+		return nil, errors.New("parameter client.subscriptionName cannot be empty")
+	}
+	urlPath = strings.ReplaceAll(urlPath, "{subscriptionName}", url.PathEscape(client.subscriptionName))
+	path, err := url.JoinPath(client.host, urlPath)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("x-mkio-token", client.token)
+
+	return req, nil
+}
+
+// listHandleResponse handles the List response.
+func (client *StreamingLocatorsClient) listHandleResponse(resp *http.Response) (armmediaservices.StreamingLocatorsClientListResponse, error) {
+	result := armmediaservices.StreamingLocatorsClientListResponse{}
+
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return armmediaservices.StreamingLocatorsClientListResponse{}, err
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return armmediaservices.StreamingLocatorsClientListResponse{}, err
+	}
+	return result, nil
+}
+
+// lookupStreamingLocators Get streaming locators from mk.io. Remove pagination
+func (client *StreamingLocatorsClient) LookupStreamingLocators(ctx context.Context) ([]*armmediaservices.StreamingLocator, error) {
+
+	req, err := client.List(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	sl := []*armmediaservices.StreamingLocator{}
+
+	// Unlike in Azure, we don't need additional calls to get content keys
+	sl = append(sl, req.StreamingLocatorCollection.Value...)
+
+	return sl, nil
+}

@@ -10,14 +10,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ExportAssets creates a file containing all Assets from an AzureMediaService Subscription
-func ExportAssets(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.Asset, error) {
+// ExportAzAssets creates a file containing all Assets from an AzureMediaService Subscription
+func ExportAzAssets(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.Asset, error) {
 	log.Info("Exporting Assets")
 
 	// Lookup Assets
 	assets, err := azSp.lookupAssets(ctx)
 	if err != nil {
 		return assets, fmt.Errorf("encountered error while exporting assets from Azure: %v", err)
+	}
+
+	return assets, nil
+}
+
+// ExportMkAssets creates a file containing all Assets from a mk.io Subscription
+func ExportMkAssets(ctx context.Context, client *mkiosdk.AssetsClient) ([]*armmediaservices.Asset, error) {
+	log.Info("Exporting Assets")
+
+	// Lookup Assets
+	assets, err := client.LookupAssets(ctx)
+	if err != nil {
+		return assets, fmt.Errorf("encountered error while exporting assets from mk.io : %v", err)
 	}
 
 	return assets, nil
