@@ -70,6 +70,10 @@ func ImportStreamingEndpoints(ctx context.Context, client *mkiosdk.StreamingEndp
 			log.Debugf("Location mismatch for %v. Setting to westus2", *se.Name)
 			westus := "westus2"
 			se.Location = &westus
+		} else if *se.Location == "West Europe" {
+			log.Debugf("Location mismatch for %v. Setting to westeurope", *se.Name)
+			westeurope := "westeurope"
+			se.Location = &westeurope
 		}
 
 		// Not supported CDN Provider. Set to Akamai, with user input
