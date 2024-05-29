@@ -55,7 +55,7 @@ func (client *MkioClient) getProfileRequest(ctx context.Context) (*http.Request,
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPut, path, nil)
+	req, err := http.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
