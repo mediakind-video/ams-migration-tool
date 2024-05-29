@@ -228,6 +228,7 @@ func (a *AzureServiceProvider) lookupContentKeyPolicies(ctx context.Context) ([]
 			props, err := client.GetPolicyPropertiesWithSecrets(ctx, a.resourceGroup, a.accountName, *v.Name, nil)
 			if err != nil {
 				ckpFailures = append(ckpFailures, *v.Name)
+				log.Errorf("unable to get content key policy %v: %v", *v.Name, err)
 				continue
 			}
 			v.Properties = &props.ContentKeyPolicyProperties
