@@ -53,7 +53,7 @@ func NewContentKeyPoliciesClient(ctx context.Context, subscriptionName string, t
 // contentKeyPolicyName - The contentKeyPolicy name.
 // parameters - The request parameters
 // options - ContentKeyPoliciesClientCreateOrUpdateOptions contains the optional parameters for the ContentKeyPoliciesClient.CreateOrUpdate method.
-func (client *ContentKeyPoliciesClient) CreateOrUpdate(ctx context.Context, contentKeyPolicyName string, parameters *armmediaservices.ContentKeyPolicy, options *armmediaservices.ContentKeyPoliciesClientCreateOrUpdateOptions) (armmediaservices.ContentKeyPoliciesClientCreateOrUpdateResponse, error) {
+func (client *ContentKeyPoliciesClient) CreateOrUpdate(ctx context.Context, contentKeyPolicyName string, parameters *FPContentKeyPolicy, options *armmediaservices.ContentKeyPoliciesClientCreateOrUpdateOptions) (armmediaservices.ContentKeyPoliciesClientCreateOrUpdateResponse, error) {
 	req, err := client.createOrUpdateCreateRequest(ctx, contentKeyPolicyName, parameters, options)
 	if err != nil {
 		return armmediaservices.ContentKeyPoliciesClientCreateOrUpdateResponse{}, err
@@ -69,7 +69,7 @@ func (client *ContentKeyPoliciesClient) CreateOrUpdate(ctx context.Context, cont
 }
 
 // createOrUpdateCreateRequest creates the CreateOrUpdate request.
-func (client *ContentKeyPoliciesClient) createOrUpdateCreateRequest(ctx context.Context, contentKeyPolicyName string, parameters *armmediaservices.ContentKeyPolicy, options *armmediaservices.ContentKeyPoliciesClientCreateOrUpdateOptions) (*http.Request, error) {
+func (client *ContentKeyPoliciesClient) createOrUpdateCreateRequest(ctx context.Context, contentKeyPolicyName string, parameters *FPContentKeyPolicy, options *armmediaservices.ContentKeyPoliciesClientCreateOrUpdateOptions) (*http.Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/contentKeyPolicies/{contentKeyPolicyName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
