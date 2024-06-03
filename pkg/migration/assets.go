@@ -40,9 +40,13 @@ func ImportAssets(ctx context.Context, client *mkiosdk.AssetsClient, assets []*a
 			if strings.Contains(err.Error(), "not found") {
 				found = false
 			}
+			log.Debugf("Error while checking if asset %v exists. Error: %v", *asset.Name, err.Error())
+		} else {
+			log.Debugf("No Errors encountered while checking asset %v. It should exist", *asset.Name)
 		}
 		if found && !overwrite {
 			// Found something and we're not overwriting. We should skip it
+			log.Debugf("Asset already exists in MKIO, skipping: %v", *asset.Name)
 			skipped++
 			continue
 		}
