@@ -15,12 +15,13 @@ import (
 
 // command line options
 var (
-	azSubscription  string
-	azResourceGroup string
-	azAccountName   string
-	mkSubscription  string
-	migrationFile   string
-	apiEndpoint     string
+	azSubscription       string
+	azResourceGroup      string
+	azAccountName        string
+	mkImportSubscription string
+	mkExportSubscription string
+	migrationFile        string
+	apiEndpoint          string
 
 	debug             bool
 	importResources   bool
@@ -66,25 +67,13 @@ var rootCmd = &cobra.Command{
 
 		migrationContents := migrate.MigrationFileContents{}
 
-		// Login to Azure for the export
-		var azureClient *migrate.AzureServiceProvider
-		if exportResources {
-			log.Info("Logging into Azure")
-			var err error
-			azureClient, err = migrate.NewAzureServiceProvider(azSubscription, azResourceGroup, azAccountName)
-			if err != nil {
-				log.Fatalf("unable to log into Azure: %v", err)
-			}
-
-		}
-
 		// Log into MKIO for the Import. Do this first so we know if it fails before we do any work.
-		var mkAssetsClient *mkiosdk.AssetsClient
-		var mkAssetFiltersClient *mkiosdk.AssetFiltersClient
-		var mkStreamingLocatorsClient *mkiosdk.StreamingLocatorsClient
-		var mkStreamingPoliciesClient *mkiosdk.StreamingPoliciesClient
-		var mkStreamingEndpointsClient *mkiosdk.StreamingEndpointsClient
-		var mkContentKeyPoliciesClient *mkiosdk.ContentKeyPoliciesClient
+		var mkImportAssetsClient *mkiosdk.AssetsClient
+		var mkImportAssetFiltersClient *mkiosdk.AssetFiltersClient
+		var mkImportStreamingLocatorsClient *mkiosdk.StreamingLocatorsClient
+		var mkImportStreamingPoliciesClient *mkiosdk.StreamingPoliciesClient
+		var mkImportStreamingEndpointsClient *mkiosdk.StreamingEndpointsClient
+		var mkImportContentKeyPoliciesClient *mkiosdk.ContentKeyPoliciesClient
 
 		// We need a login for import and validate. We should try that early so we don't do work if we can't login.
 		if importResources || validateResources {
@@ -97,27 +86,27 @@ var rootCmd = &cobra.Command{
 			}
 
 			// Create Clients
-			mkAssetsClient, err = mkiosdk.NewAssetsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			mkImportAssetsClient, err = mkiosdk.NewAssetsClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating mk.io Assets Client: %v", err)
 			}
-			mkAssetFiltersClient, err = mkiosdk.NewAssetFiltersClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			mkImportAssetFiltersClient, err = mkiosdk.NewAssetFiltersClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating mk.io Asset Filters Client: %v", err)
 			}
-			mkStreamingPoliciesClient, err = mkiosdk.NewStreamingPoliciesClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			mkImportStreamingPoliciesClient, err = mkiosdk.NewStreamingPoliciesClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating mk.io StreamingPolicies Client: %v", err)
 			}
-			mkStreamingLocatorsClient, err = mkiosdk.NewStreamingLocatorsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			mkImportStreamingLocatorsClient, err = mkiosdk.NewStreamingLocatorsClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating mk.io StreamingLocators Client: %v", err)
 			}
-			mkStreamingEndpointsClient, err = mkiosdk.NewStreamingEndpointsClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			mkImportStreamingEndpointsClient, err = mkiosdk.NewStreamingEndpointsClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating mk.io StreamingEndpoints Client: %v", err)
 			}
-			mkContentKeyPoliciesClient, err = mkiosdk.NewContentKeyPoliciesClient(ctx, mkSubscription, mkToken, apiEndpoint, nil)
+			mkImportContentKeyPoliciesClient, err = mkiosdk.NewContentKeyPoliciesClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
 			if err != nil {
 				log.Fatalf("error creating mk.io ContentKeyPolicies Client: %v", err)
 			}
@@ -130,64 +119,182 @@ var rootCmd = &cobra.Command{
 				log.Fatalf("AssetFilter export requires Asset export")
 			}
 
-			log.Info("Starting Export from Azure")
+			if (azSubscription != "" || azResourceGroup != "" || azAccountName != "") && mkExportSubscription != "" {
+				log.Fatal("export Error: cannot export from both Azure and mk.io subscription")
+			}
 
-			// Handle Assets
-			if assets {
-				assetList, err := migrate.ExportAssets(ctx, azureClient)
-				if err != nil {
-					log.Errorf("error exporting assets: %v", err)
-				}
-
-				migrationContents.Assets = assetList
-
-				// Handle Asset Filters -- Can only do this if we have a list of assets
-				if assetFilters {
-					assetFiltersList, err := migrate.ExportAssetFilters(ctx, azureClient, assetList)
+			// Handle Azure Export
+			if azSubscription != "" && azResourceGroup != "" && azAccountName != "" {
+				// Login to Azure for the export
+				var azureClient *migrate.AzureServiceProvider
+				if exportResources {
+					log.Info("Logging into Azure")
+					var err error
+					azureClient, err = migrate.NewAzureServiceProvider(azSubscription, azResourceGroup, azAccountName)
 					if err != nil {
-						log.Errorf("error exporting asset filters: %v", err)
+						log.Fatalf("unable to log into Azure: %v", err)
 					}
 
-					migrationContents.AssetFilters = assetFiltersList
-
 				}
-			}
 
-			// Handle Streaming Policies. These are used by StreamingLocators, so do it first
-			if streamingPolicies {
-				sp, err := migrate.ExportStreamingPolicies(ctx, azureClient)
+				// A couple of simple checks to avoid bad things
+				if assetFilters && !assets {
+					log.Fatalf("AssetFilter export requires Asset export")
+				}
+
+				log.Info("Starting Export from Azure")
+
+				// Handle Assets
+				if assets {
+					assetList, err := migrate.ExportAzAssets(ctx, azureClient)
+					if err != nil {
+						log.Errorf("error exporting assets: %v", err)
+					}
+
+					migrationContents.Assets = assetList
+
+					// Handle Asset Filters -- Can only do this if we have a list of assets
+					if assetFilters {
+						assetFiltersList, err := migrate.ExportAzAssetFilters(ctx, azureClient, assetList)
+						if err != nil {
+							log.Errorf("error exporting asset filters: %v", err)
+						}
+
+						migrationContents.AssetFilters = assetFiltersList
+
+					}
+				}
+
+				// Handle Streaming Policies. These are used by StreamingLocators, so do it first
+				if streamingPolicies {
+					sp, err := migrate.ExportAzStreamingPolicies(ctx, azureClient)
+					if err != nil {
+						log.Errorf("error exporting streaming policies: %v", err)
+					}
+					migrationContents.StreamingPolicies = sp
+				}
+
+				// Handle StreamingLocators.
+				if streamingLocators {
+					streamingLocatorsList, err := migrate.ExportAzStreamingLocators(ctx, azureClient)
+					if err != nil {
+						log.Errorf("error exporting streaming locators: %v", err)
+					}
+
+					migrationContents.StreamingLocators = streamingLocatorsList
+				}
+
+				// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
+				if streamingEndpoints {
+					se, err := migrate.ExportAzStreamingEndpoints(ctx, azureClient)
+					if err != nil {
+						log.Errorf("error exporting streaming locators: %v", err)
+					}
+
+					migrationContents.StreamingEndpoints = se
+				}
+				// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
+				if contentKeyPolicies {
+					ckp, err := migrate.ExportAzContentKeyPolicies(ctx, azureClient)
+					if err != nil {
+						log.Errorf("error exporting content key policies: %v", err)
+					}
+					migrationContents.ContentKeyPolicies = ckp
+				}
+			} else if mkExportSubscription != "" {
+				// Log into MKIO for the Export.
+				mkToken := os.Getenv("MKIO_TOKEN")
+				if mkToken == "" {
+					log.Fatalf("import Error: could not find MKIO_TOKEN environment variable")
+				}
+
+				mkExportAssetsClient, err := mkiosdk.NewAssetsClient(ctx, mkExportSubscription, mkToken, apiEndpoint, nil)
 				if err != nil {
-					log.Errorf("error exporting streaming policies: %v", err)
+					log.Fatalf("error creating mk.io Assets Client: %v", err)
 				}
-				migrationContents.StreamingPolicies = sp
-			}
-
-			// Handle StreamingLocators.
-			if streamingLocators {
-				streamingLocatorsList, err := migrate.ExportStreamingLocators(ctx, azureClient)
+				mkExportAssetFiltersClient, err := mkiosdk.NewAssetFiltersClient(ctx, mkExportSubscription, mkToken, apiEndpoint, nil)
 				if err != nil {
-					log.Errorf("error exporting streaming locators: %v", err)
+					log.Fatalf("error creating mk.io Asset Filters Client: %v", err)
 				}
-
-				migrationContents.StreamingLocators = streamingLocatorsList
-			}
-
-			// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
-			if streamingEndpoints {
-				se, err := migrate.ExportStreamingEndpoints(ctx, azureClient)
+				mkExportStreamingLocatorsClient, err := mkiosdk.NewStreamingLocatorsClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
 				if err != nil {
-					log.Errorf("error exporting streaming locators: %v", err)
+					log.Fatalf("error creating mk.io StreamingLocators Client: %v", err)
+				}
+				mkExportStreamingPoliciesClient, err := mkiosdk.NewStreamingPoliciesClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
+				if err != nil {
+					log.Fatalf("error creating mk.io StreamingPolicies Client: %v", err)
+				}
+				mkExportStreamingEndpointsClient, err := mkiosdk.NewStreamingEndpointsClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
+				if err != nil {
+					log.Fatalf("error creating mk.io StreamingEndpoints Client: %v", err)
+				}
+				mkExportContentKeyPoliciesClient, err := mkiosdk.NewContentKeyPoliciesClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
+				if err != nil {
+					log.Fatalf("error creating mk.io ContentKeyPolicies Client: %v", err)
 				}
 
-				migrationContents.StreamingEndpoints = se
-			}
-			// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
-			if contentKeyPolicies {
-				ckp, err := migrate.ExportContentKeyPolicies(ctx, azureClient)
-				if err != nil {
-					log.Errorf("error exporting content key policies: %v", err)
+				log.Info("Starting Export from mk.io")
+
+				// Handle Assets
+				if assets {
+					assetList, err := migrate.ExportMkAssets(ctx, mkExportAssetsClient)
+					if err != nil {
+						log.Errorf("error exporting assets: %v", err)
+					}
+
+					migrationContents.Assets = assetList
+
+					// Handle Asset Filters -- Can only do this if we have a list of assets
+					if assetFilters {
+						assetFiltersList, err := migrate.ExportMkAssetFilters(ctx, mkExportAssetFiltersClient, assetList)
+						if err != nil {
+							log.Errorf("error exporting asset filters: %v", err)
+						}
+
+						migrationContents.AssetFilters = assetFiltersList
+
+					}
 				}
-				migrationContents.ContentKeyPolicies = ckp
+
+				// Handle Streaming Policies. These are used by StreamingLocators, so do it first
+				if streamingPolicies {
+					sp, err := migrate.ExportMkStreamingPolicies(ctx, mkExportStreamingPoliciesClient)
+					if err != nil {
+						log.Errorf("error exporting streaming policies: %v", err)
+					}
+					migrationContents.StreamingPolicies = sp
+				}
+
+				// // Handle StreamingLocators.
+				if streamingLocators {
+					streamingLocatorsList, err := migrate.ExportMkStreamingLocators(ctx, mkExportStreamingLocatorsClient)
+					if err != nil {
+						log.Errorf("error exporting streaming locators: %v", err)
+					}
+
+					migrationContents.StreamingLocators = streamingLocatorsList
+				}
+
+				// // Handle StreamingEndpoints. Switching to handle as part of assets. They are related
+				if streamingEndpoints {
+					se, err := migrate.ExportMkStreamingEndpoints(ctx, mkExportStreamingEndpointsClient)
+					if err != nil {
+						log.Errorf("error exporting streaming locators: %v", err)
+					}
+
+					migrationContents.StreamingEndpoints = se
+				}
+				// // Handle StreamingEndpoints. Switching to handle as part of assets. They are related
+				if contentKeyPolicies {
+					ckp, err := migrate.ExportMkContentKeyPolicies(ctx, mkExportContentKeyPoliciesClient)
+					if err != nil {
+						log.Errorf("error exporting content key policies: %v", err)
+					}
+					migrationContents.ContentKeyPolicies = ckp
+				}
+				// } else {
+				// 	log.Fatal("export Error: cannot export without Azure or mk.io subscription information")
+				// }
 			}
 
 			err := migrationContents.WriteMigrationFile(ctx, migrationFile)
@@ -195,7 +302,6 @@ var rootCmd = &cobra.Command{
 				// No point continuing w/o this file... Exit
 				log.Fatalf("unable to write migration export file contents: %v", err)
 			}
-
 			log.Infof("Done exporting. Exported content written to file: %s", migrationFile)
 		}
 
@@ -212,7 +318,7 @@ var rootCmd = &cobra.Command{
 
 			// Handling ConentKeyPolicies. This should happen before StreamingLocators
 			if contentKeyPolicies {
-				err := migrate.ImportContentKeyPolicies(ctx, mkContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite, fairplayAmsCompatibility)
+				err := migrate.ImportContentKeyPolicies(ctx, mkImportContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite, fairplayAmsCompatibility)
 				if err != nil {
 					log.Errorf("error importing content key policies: %v", err)
 				}
@@ -220,7 +326,7 @@ var rootCmd = &cobra.Command{
 
 			// Handling Assets
 			if assets {
-				err := migrate.ImportAssets(ctx, mkAssetsClient, contents.Assets, overwrite)
+				err := migrate.ImportAssets(ctx, mkImportAssetsClient, contents.Assets, overwrite)
 				if err != nil {
 					log.Errorf("error importing assets: %v", err)
 				}
@@ -228,7 +334,7 @@ var rootCmd = &cobra.Command{
 
 			// Handling Asset Filters. These require an asset, so import after assets
 			if assetFilters {
-				err := migrate.ImportAssetFilters(ctx, mkAssetFiltersClient, contents.AssetFilters, overwrite)
+				err := migrate.ImportAssetFilters(ctx, mkImportAssetFiltersClient, contents.AssetFilters, overwrite)
 				if err != nil {
 					log.Errorf("error importing asset filters: %v", err)
 				}
@@ -236,14 +342,14 @@ var rootCmd = &cobra.Command{
 
 			// Handling StreamingPolicies
 			if streamingPolicies {
-				err := migrate.ImportStreamingPolicies(ctx, mkStreamingPoliciesClient, contents.StreamingPolicies, overwrite)
+				err := migrate.ImportStreamingPolicies(ctx, mkImportStreamingPoliciesClient, contents.StreamingPolicies, overwrite)
 				if err != nil {
 					log.Errorf("error importing streaming policies: %v", err)
 				}
 			}
 			// Handling StreamingLocators
 			if streamingLocators {
-				err := migrate.ImportStreamingLocators(ctx, mkStreamingLocatorsClient, contents.StreamingLocators, overwrite)
+				err := migrate.ImportStreamingLocators(ctx, mkImportStreamingLocatorsClient, contents.StreamingLocators, overwrite)
 				if err != nil {
 					log.Errorf("error importing streaming locators: %v", err)
 				}
@@ -251,7 +357,7 @@ var rootCmd = &cobra.Command{
 
 			// Handling StreamingEndpoints
 			if streamingEndpoints {
-				err := migrate.ImportStreamingEndpoints(ctx, mkStreamingEndpointsClient, contents.StreamingEndpoints, overwrite)
+				err := migrate.ImportStreamingEndpoints(ctx, mkImportStreamingEndpointsClient, contents.StreamingEndpoints, overwrite)
 				if err != nil {
 					log.Errorf("error importing streaming endpoints: %v", err)
 				}
@@ -274,7 +380,7 @@ var rootCmd = &cobra.Command{
 
 			// Handling StreamingLocators
 			if streamingLocators {
-				err := migrate.ValidateStreamingLocators(ctx, mkStreamingLocatorsClient, mkStreamingEndpointsClient, contents.StreamingLocators)
+				err := migrate.ValidateStreamingLocators(ctx, mkImportStreamingLocatorsClient, mkImportStreamingEndpointsClient, contents.StreamingLocators)
 				if err != nil {
 					log.Errorf("error validating streamingLocators: %v", err)
 				}
@@ -300,7 +406,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&azSubscription, "azure-subscription", "", "Azure Subscription ID for existing AMS")
 	rootCmd.PersistentFlags().StringVar(&azResourceGroup, "azure-resource-group", "", "Resource Group for existing AMS")
 	rootCmd.PersistentFlags().StringVar(&azAccountName, "azure-account-name", "", "Account Name for existing AMS")
-	rootCmd.PersistentFlags().StringVar(&mkSubscription, "mediakind-subscription", "", "Mediakind Subscription ID for mk.io")
+	rootCmd.PersistentFlags().StringVar(&mkImportSubscription, "mediakind-import-subscription", "", "Mediakind Subscription ID for import in mk.io")
+	rootCmd.PersistentFlags().StringVar(&mkExportSubscription, "mediakind-export-subscription", "", "Mediakind Subscription ID for import in mk.io")
 	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "https://api.mk.io", "mk.io API endpoint")
 
 	rootCmd.PersistentFlags().StringVar(&migrationFile, "migration-file", "", "Migration filename")

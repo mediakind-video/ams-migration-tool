@@ -206,3 +206,68 @@ func (client *AssetFiltersClient) getHandleResponse(resp *http.Response) (armmed
 	}
 	return result, nil
 }
+
+// lookupAssetFilters  Get asset filters from mk.io.
+func (client *AssetFiltersClient) LookupAssetFilters(ctx context.Context, assetName string) ([]*armmediaservices.AssetFilter, error) {
+	assetFilters := []*armmediaservices.AssetFilter{}
+
+	req, err := client.List(ctx, assetName, nil)
+	if err != nil {
+		return assetFilters, err
+	}
+
+	assetFilters = append(assetFilters, req.AssetFilterCollection.Value...)
+
+	return assetFilters, nil
+}
+
+func (client *AssetFiltersClient) List(ctx context.Context, assetName string, options *armmediaservices.AssetFiltersClientListOptions) (armmediaservices.AssetFiltersClientListResponse, error) {
+	req, err := client.listCreateRequest(ctx, assetName, options)
+	if err != nil {
+		return armmediaservices.AssetFiltersClientListResponse{}, err
+	}
+
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
+	if err != nil {
+		// We hit some error we and failed retry loop. Return error
+		return armmediaservices.AssetFiltersClientListResponse{}, err
+	}
+
+	return client.listHandleResponse(resp)
+}
+
+// listCreateRequest creates the list request.
+func (client *AssetFiltersClient) listCreateRequest(ctx context.Context, assetName string, options *armmediaservices.AssetFiltersClientListOptions) (*http.Request, error) {
+	urlPath := "/api/ams/{subscriptionName}/assets/{assetName}/assetFilters"
+	if client.subscriptionName == "" {
+		return nil, errors.New("parameter client.subscriptionName cannot be empty")
+	}
+	urlPath = strings.ReplaceAll(urlPath, "{subscriptionName}", url.PathEscape(client.subscriptionName))
+	urlPath = strings.ReplaceAll(urlPath, "{assetName}", url.PathEscape(assetName))
+	path, err := url.JoinPath(client.host, urlPath)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("x-mkio-token", client.token)
+	return req, nil
+}
+
+// listHandleResponse handles the list response.
+func (client *AssetFiltersClient) listHandleResponse(resp *http.Response) (armmediaservices.AssetFiltersClientListResponse, error) {
+	result := armmediaservices.AssetFiltersClientListResponse{}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return armmediaservices.AssetFiltersClientListResponse{}, err
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return armmediaservices.AssetFiltersClientListResponse{}, err
+	}
+	return result, nil
+}

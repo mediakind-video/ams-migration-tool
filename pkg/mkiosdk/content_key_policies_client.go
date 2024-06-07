@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -200,4 +201,139 @@ func (client *ContentKeyPoliciesClient) getHandleResponse(resp *http.Response) (
 		return armmediaservices.ContentKeyPoliciesClientGetResponse{}, err
 	}
 	return result, nil
+}
+
+// GetPolicyPropertiesWithSWecrets - Get the details of a ContentKeyPolicy in the mk.io account
+// If the operation fails it returns an *ResponseError type.
+// contentKeyPolicyName - The contentKeyPolicy name.
+// options - ContentKeyPoliciesClientGetOptions contains the optional parameters for the ContentKeyPolicisClient.Get method.
+func (client *ContentKeyPoliciesClient) GetPolicyPropertiesWithSecrets(ctx context.Context, contentKeyPolicyName string, options *armmediaservices.ContentKeyPoliciesClientGetOptions) (armmediaservices.ContentKeyPoliciesClientGetResponse, error) {
+	req, err := client.getWithSecretsCreateRequest(ctx, contentKeyPolicyName, options)
+	if err != nil {
+		return armmediaservices.ContentKeyPoliciesClientGetResponse{}, err
+	}
+
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
+	if err != nil {
+		return armmediaservices.ContentKeyPoliciesClientGetResponse{}, err
+	}
+
+	return client.getWithSecretsHandleResponse(resp)
+}
+
+// getCreateRequest creates the Get request.
+func (client *ContentKeyPoliciesClient) getWithSecretsCreateRequest(ctx context.Context, contentKeyPolicyName string, options *armmediaservices.ContentKeyPoliciesClientGetOptions) (*http.Request, error) {
+	urlPath := "/api/ams/{subscriptionName}/contentKeyPolicies/{contentKeyPolicyName}/getPolicyPropertiesWithSecrets"
+	if client.subscriptionName == "" {
+		return nil, errors.New("parameter client.subscriptionName cannot be empty")
+	}
+	urlPath = strings.ReplaceAll(urlPath, "{subscriptionName}", url.PathEscape(client.subscriptionName))
+	urlPath = strings.ReplaceAll(urlPath, "{contentKeyPolicyName}", url.PathEscape(contentKeyPolicyName))
+	path, err := url.JoinPath(client.host, urlPath)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodPost, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("x-mkio-token", client.token)
+	return req, nil
+}
+
+// getHandleResponse handles the Get response.
+func (client *ContentKeyPoliciesClient) getWithSecretsHandleResponse(resp *http.Response) (armmediaservices.ContentKeyPoliciesClientGetResponse, error) {
+	result := armmediaservices.ContentKeyPoliciesClientGetResponse{}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return armmediaservices.ContentKeyPoliciesClientGetResponse{}, err
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return armmediaservices.ContentKeyPoliciesClientGetResponse{}, err
+	}
+	return result, nil
+}
+
+// List - List ContentKeyPolicy in the mk.io account
+// If the operation fails it returns an *ResponseError type.
+// options - ContentKeyPoliciesClientListOptions contains the optional parameters for the ContentKeyPolicisClient.Get method.
+func (client *ContentKeyPoliciesClient) List(ctx context.Context, options *armmediaservices.ContentKeyPoliciesClientListOptions) (armmediaservices.ContentKeyPoliciesClientListResponse, error) {
+	req, err := client.listCreateRequest(ctx, options)
+	if err != nil {
+		return armmediaservices.ContentKeyPoliciesClientListResponse{}, err
+	}
+
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
+	if err != nil {
+		return armmediaservices.ContentKeyPoliciesClientListResponse{}, err
+	}
+
+	return client.listHandleResponse(resp)
+}
+
+// listCreateRequest creates the Get request.
+func (client *ContentKeyPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.ContentKeyPoliciesClientListOptions) (*http.Request, error) {
+	urlPath := "/api/ams/{subscriptionName}/contentKeyPolicies"
+	if client.subscriptionName == "" {
+		return nil, errors.New("parameter client.subscriptionName cannot be empty")
+	}
+	urlPath = strings.ReplaceAll(urlPath, "{subscriptionName}", url.PathEscape(client.subscriptionName))
+	path, err := url.JoinPath(client.host, urlPath)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("x-mkio-token", client.token)
+	return req, nil
+}
+
+// listHandleResponse handles the list response.
+func (client *ContentKeyPoliciesClient) listHandleResponse(resp *http.Response) (armmediaservices.ContentKeyPoliciesClientListResponse, error) {
+	result := armmediaservices.ContentKeyPoliciesClientListResponse{}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return armmediaservices.ContentKeyPoliciesClientListResponse{}, err
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return armmediaservices.ContentKeyPoliciesClientListResponse{}, err
+	}
+	return result, nil
+}
+
+// lookupContentKeyPolicies  Get content key policies from mk.io
+func (client *ContentKeyPoliciesClient) LookupContentKeyPolicies(ctx context.Context) ([]*armmediaservices.ContentKeyPolicy, error) {
+
+	req, err := client.List(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	ckp := []*armmediaservices.ContentKeyPolicy{}
+	skipped := []string{}
+
+	for _, v := range req.ContentKeyPolicyCollection.Value {
+		// get content key policy with secrets
+		props, err := client.GetPolicyPropertiesWithSecrets(ctx, *v.Name, nil)
+		if err != nil {
+			skipped = append(skipped, *v.Name)
+			continue
+		}
+		ckp = append(ckp, &props.ContentKeyPolicy)
+	}
+
+	if len(skipped) > 0 {
+		// Return error after we've looped through all the content key policies
+		return ckp, fmt.Errorf("unable to get content key policy %v", skipped)
+	}
+
+	return ckp, nil
 }

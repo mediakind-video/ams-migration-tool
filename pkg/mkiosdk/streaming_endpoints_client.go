@@ -255,3 +255,18 @@ func (client *StreamingEndpointsClient) deleteCreateRequest(ctx context.Context,
 
 	return req, nil
 }
+
+// lookupStreamingEndpoints Get streaming endpoints from mk.io. Remove pagination
+func (client *StreamingEndpointsClient) LookupStreamingEndpoints(ctx context.Context) ([]*armmediaservices.StreamingEndpoint, error) {
+
+	req, err := client.List(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	se := []*armmediaservices.StreamingEndpoint{}
+
+	se = append(se, req.StreamingEndpointListResult.Value...)
+
+	return se, nil
+}

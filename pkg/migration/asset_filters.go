@@ -10,8 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ExportAssetFilters creates a file containing all AssetFilters from an AzureMediaService Subscription
-func ExportAssetFilters(ctx context.Context, azSp *AzureServiceProvider, assets []*armmediaservices.Asset) (map[string][]*armmediaservices.AssetFilter, error) {
+// ExportAzAssetFilters creates a file containing all AssetFilters from an AzureMediaService Subscription
+func ExportAzAssetFilters(ctx context.Context, azSp *AzureServiceProvider, assets []*armmediaservices.Asset) (map[string][]*armmediaservices.AssetFilter, error) {
 	log.Info("Exporting AssetFilters")
 
 	allAssetFilters := map[string][]*armmediaservices.AssetFilter{}
@@ -21,6 +21,30 @@ func ExportAssetFilters(ctx context.Context, azSp *AzureServiceProvider, assets 
 		log.Debugf("exporting filters for asset %v", *a.Name)
 		// Lookup AssetFilters
 		assetFilters, err := azSp.lookupAssetFilters(ctx, *a.Name)
+		if err != nil {
+			skipped = append(skipped, *a.Name)
+		}
+		allAssetFilters[*a.Name] = assetFilters
+	}
+
+	if len(skipped) > 0 {
+		return allAssetFilters, fmt.Errorf("failed to export %d Asset Filters: %v", len(skipped), skipped)
+	}
+
+	return allAssetFilters, nil
+}
+
+// ExportMkAssetFilters creates a file containing all AssetFilters from an mk.io Subscription
+func ExportMkAssetFilters(ctx context.Context, client *mkiosdk.AssetFiltersClient, assets []*armmediaservices.Asset) (map[string][]*armmediaservices.AssetFilter, error) {
+	log.Info("Exporting AssetFilters")
+
+	allAssetFilters := map[string][]*armmediaservices.AssetFilter{}
+	skipped := []string{}
+	for _, a := range assets {
+
+		log.Debugf("exporting filters for asset %v", *a.Name)
+		// Lookup AssetFilters
+		assetFilters, err := client.LookupAssetFilters(ctx, *a.Name)
 		if err != nil {
 			skipped = append(skipped, *a.Name)
 		}

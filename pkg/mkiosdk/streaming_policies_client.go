@@ -200,3 +200,74 @@ func (client *StreamingPoliciesClient) getHandleResponse(resp *http.Response) (a
 	}
 	return result, nil
 }
+
+// List - List Streaming Policy in the mk.io account
+// If the operation fails it returns an *ResponseError type.
+// options - StreamingPoliciesClientListOptions contains the optional parameters for the StreamingPoliciesClient.List method.
+func (client *StreamingPoliciesClient) List(ctx context.Context, options *armmediaservices.StreamingPoliciesClientListOptions) (armmediaservices.StreamingPoliciesClientListResponse, error) {
+	req, err := client.listCreateRequest(ctx, options)
+	if err != nil {
+		return armmediaservices.StreamingPoliciesClientListResponse{}, err
+	}
+	// Try to do request, handle retries if tooManyRequests
+	resp, err := client.DoRequestWithBackoff(req)
+	if err != nil {
+		// We hit some error we and failed retry loop. Return error
+		return armmediaservices.StreamingPoliciesClientListResponse{}, err
+	}
+	return client.listHandleResponse(resp)
+}
+
+// listCreateRequest creates the List request.
+func (client *StreamingPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingPoliciesClientListOptions) (*http.Request, error) {
+	urlPath := "/api/ams/{subscriptionName}/streamingPolicies"
+	if client.subscriptionName == "" {
+		return nil, errors.New("parameter client.subscriptionName cannot be empty")
+	}
+	urlPath = strings.ReplaceAll(urlPath, "{subscriptionName}", url.PathEscape(client.subscriptionName))
+	path, err := url.JoinPath(client.host, urlPath)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("x-mkio-token", client.token)
+	return req, nil
+}
+
+// listHandleResponse handles the List response.
+func (client *StreamingPoliciesClient) listHandleResponse(resp *http.Response) (armmediaservices.StreamingPoliciesClientListResponse, error) {
+	result := armmediaservices.StreamingPoliciesClientListResponse{}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return armmediaservices.StreamingPoliciesClientListResponse{}, err
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return armmediaservices.StreamingPoliciesClientListResponse{}, err
+	}
+	return result, nil
+}
+
+// lookupStreamingPolicies Get streaming policies from mk.io
+func (client *StreamingPoliciesClient) LookupStreamingPolicies(ctx context.Context) ([]*armmediaservices.StreamingPolicy, error) {
+
+	req, err := client.List(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	sp := []*armmediaservices.StreamingPolicy{}
+
+	// Only export custom streaming policies
+	for _, v := range req.StreamingPolicyCollection.Value {
+		if !strings.HasPrefix(*v.Name, "Predefined_") {
+			sp = append(sp, v)
+		}
+	}
+
+	return sp, nil
+}

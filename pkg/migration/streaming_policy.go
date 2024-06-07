@@ -10,14 +10,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ExportStreamingPolicies creates a file containing all StreamingPolicies from an AzureMediaService Subscription
-func ExportStreamingPolicies(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.StreamingPolicy, error) {
+// ExportAzStreamingPolicies creates a file containing all StreamingPolicies from an AzureMediaService Subscription
+func ExportAzStreamingPolicies(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.StreamingPolicy, error) {
 	log.Info("Exporting Streaming Policies")
 
 	// Lookup StreamingPolicies
 	sl, err := azSp.lookupStreamingPolicies(ctx)
 	if err != nil {
 		return sl, fmt.Errorf("encountered error while exporting StreamingPolicies From Azure: %v", err)
+	}
+
+	return sl, nil
+}
+
+// ExportMkStreamingPolicies creates a file containing all StreamingPolicies from a mk.io Subscription
+func ExportMkStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPoliciesClient) ([]*armmediaservices.StreamingPolicy, error) {
+	log.Info("Exporting Streaming Policies")
+
+	// Lookup StreamingPolicies
+	sl, err := client.LookupStreamingPolicies(ctx)
+	if err != nil {
+		return sl, fmt.Errorf("encountered error while exporting StreamingPolicies From mk.io: %v", err)
 	}
 
 	return sl, nil

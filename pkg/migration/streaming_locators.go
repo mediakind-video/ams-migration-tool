@@ -11,14 +11,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ExportStreamingLocators creates a file containing all StreamingLocators from an AzureMediaService Subscription
-func ExportStreamingLocators(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.StreamingLocator, error) {
+// ExportAzStreamingLocators creates a file containing all StreamingLocators from an AzureMediaService Subscription
+func ExportAzStreamingLocators(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.StreamingLocator, error) {
 	log.Info("Exporting Streaming Locators")
 
 	// Lookup StreamingLocators
 	sl, err := azSp.lookupStreamingLocators(ctx)
 	if err != nil {
 		return sl, fmt.Errorf("encountered error while exporting StreamingLocators From Azure: %v", err)
+	}
+
+	return sl, nil
+}
+
+// ExportMkStreamingLocators creates a file containing all StreamingLocators from a mk.io Subscription
+func ExportMkStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocatorsClient) ([]*armmediaservices.StreamingLocator, error) {
+	log.Info("Exporting Streaming Locators")
+
+	// Lookup StreamingLocators
+	sl, err := client.LookupStreamingLocators(ctx)
+	if err != nil {
+		return sl, fmt.Errorf("encountered error while exporting StreamingLocators From mk.io: %v", err)
 	}
 
 	return sl, nil
