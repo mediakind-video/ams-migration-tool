@@ -12,8 +12,8 @@ import (
 
 var fpConfiguration = "#Microsoft.Media.ContentKeyPolicyFairPlayConfiguration"
 
-// ExportContentKeyPolicies creates a file containing all ContentKeyPolicies from an AzureMediaService Subscription
-func ExportContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.ContentKeyPolicy, error) {
+// ExportAzContentKeyPolicies creates a file containing all ContentKeyPolicies from an AzureMediaService Subscription
+func ExportAzContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.ContentKeyPolicy, error) {
 	log.Info("Exporting ContentKeyPolicies")
 
 	// Lookup ContentKeyPolicies
