@@ -10,8 +10,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ExportAzContentKeyPolicies creates a file containing all ContentKeyPolicies from an AzureMediaService Subscription
-func ExportAzContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.ContentKeyPolicy, error) {
+var fpConfiguration = "#Microsoft.Media.ContentKeyPolicyFairPlayConfiguration"
+
+// ExportContentKeyPolicies creates a file containing all ContentKeyPolicies from an AzureMediaService Subscription
+func ExportContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.ContentKeyPolicy, error) {
 	log.Info("Exporting ContentKeyPolicies")
 
 	// Lookup ContentKeyPolicies
@@ -37,14 +39,37 @@ func ExportMkContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyP
 }
 
 // ImportContentKeyPolicies reads a file containing ContentKeyPolicies in JSON format. Insert each ContentKeyPolicy into MKIO
-func ImportContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyPoliciesClient, contentKeyPolicies []*armmediaservices.ContentKeyPolicy, overwrite bool) error {
+func ImportContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyPoliciesClient, contentKeyPolicies []*armmediaservices.ContentKeyPolicy, overwrite bool, fairplayAmsCompatibility bool) error {
 	log.Info("Importing ContentKeyPolicies")
 
 	failedContentKeyPolicies := []string{}
 	skipped := 0
 	successCount := 0
-	// Create each ContentKeyPolicy
+
+	// Workaround to add FairPlayAmsCompatibility element to ContentKeyPolicy
+	fpContentKeyPolicies := make([]*mkiosdk.FPContentKeyPolicy, 0)
 	for _, contentKeyPolicy := range contentKeyPolicies {
+		val := false
+		if fairplayAmsCompatibility {
+			for _, option := range contentKeyPolicy.Properties.Options {
+				if *option.Configuration.GetContentKeyPolicyConfiguration().ODataType == fpConfiguration {
+					val = true
+					break
+				}
+			}
+		}
+		fpContentKeyPolicies = append(fpContentKeyPolicies,
+			&mkiosdk.FPContentKeyPolicy{
+				ContentKeyPolicy: *contentKeyPolicy,
+				FPProperties: &mkiosdk.FPContentKeyPolicyProperties{
+					ContentKeyPolicyProperties: *contentKeyPolicy.Properties,
+					FairPlayAmsCompatibility:   &val,
+				},
+			})
+	}
+
+	// Create each ContentKeyPolicy
+	for _, contentKeyPolicy := range fpContentKeyPolicies {
 
 		found := true
 		// Check if ContentKeyPolicy already exists. Skip update unless overwrite is set

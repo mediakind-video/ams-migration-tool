@@ -3,7 +3,6 @@ package migrate
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"dev.azure.com/mediakind/mkio/ams-migration-tool.git/pkg/mkiosdk"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices"
@@ -50,12 +49,11 @@ func ImportAssets(ctx context.Context, client *mkiosdk.AssetsClient, assets []*a
 		// Check if asset already exists. Skip update unless overwrite is set
 		_, err := client.Get(ctx, *asset.Name, nil)
 		if err != nil {
-			if strings.Contains(err.Error(), "not found") {
-				found = false
-			}
+			found = false
 		}
 		if found && !overwrite {
 			// Found something and we're not overwriting. We should skip it
+			log.Debugf("Asset already exists in MKIO, skipping: %v", *asset.Name)
 			skipped++
 			continue
 		}

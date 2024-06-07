@@ -35,6 +35,8 @@ var (
 	streamingLocators  bool
 	streamingEndpoints bool
 	streamingPolicies  bool
+
+	fairplayAmsCompatibility bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -316,7 +318,7 @@ var rootCmd = &cobra.Command{
 
 			// Handling ConentKeyPolicies. This should happen before StreamingLocators
 			if contentKeyPolicies {
-				err := migrate.ImportContentKeyPolicies(ctx, mkImportContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite)
+				err := migrate.ImportContentKeyPolicies(ctx, mkImportContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite, fairplayAmsCompatibility)
 				if err != nil {
 					log.Errorf("error importing content key policies: %v", err)
 				}
@@ -422,6 +424,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&streamingLocators, "streaming-locators", false, "run Export/Import on StreamingLocators")
 	rootCmd.PersistentFlags().BoolVar(&streamingEndpoints, "streaming-endpoints", false, "run Export/Import on StreamingEndpoints")
 	rootCmd.PersistentFlags().BoolVar(&streamingPolicies, "streaming-policies", false, "run Export/Import on StreamingPolicies")
+
+	rootCmd.PersistentFlags().BoolVar(&fairplayAmsCompatibility, "fairplay-ams-compatibility", false, "set fairPlayAmsCompatibility=true for all fairplay content key policies")
 
 	// Configure Logger
 	// log.SetFormatter(&log.JSONFormatter{})
