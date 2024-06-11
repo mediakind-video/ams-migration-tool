@@ -90,4 +90,4 @@ I would suggest testing out assets beforehand to make sure you have one that wor
 
 Run the migration using the information gathers in Setup
 
-./mkio-ams-migration --azure-subscription 29628ffc-5d07-4af3-88a8-3f710582a73b --azure-resource-group ams-test --azure-account-name amstest --mediakind-subscription migration --export --import --assets --streaming-locators --asset-filters --content-key-policies --streaming-endpoints
+./mkio-ams-migration --azure-subscription 29628ffc-5d07-4af3-88a8-3f710582a73b --azure-resource-group ams-test --azure-account-name amstest --mediakind-import-subscription migration --export --import --assets --streaming-locators --asset-filters --content-key-policies --streaming-endpoints
