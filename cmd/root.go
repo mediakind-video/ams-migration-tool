@@ -411,8 +411,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&mkImportSubscription, "mediakind-import-subscription", "", "Mediakind Subscription ID for import in mk.io")
 	rootCmd.PersistentFlags().StringVar(&mkExportSubscription, "mediakind-export-subscription", "", "Mediakind Subscription ID for import in mk.io")
 	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "https://api.mk.io", "mk.io API endpoint")
-	rootCmd.PersistentFlags().StringVar(&createdBefore, "created-before", "", "filter to resources created before date")
-	rootCmd.PersistentFlags().StringVar(&createdAfter, "created-after", "", "filter to resources created after date")
+	rootCmd.PersistentFlags().StringVar(&createdBefore, "created-before", "", "filter export for resources created before date")
+	rootCmd.PersistentFlags().StringVar(&createdAfter, "created-after", "", "filter export for resources created after date")
 
 	rootCmd.PersistentFlags().StringVar(&migrationFile, "migration-file", "", "Migration filename")
 
