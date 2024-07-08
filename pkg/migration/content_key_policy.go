@@ -13,11 +13,11 @@ import (
 var fpConfiguration = "#Microsoft.Media.ContentKeyPolicyFairPlayConfiguration"
 
 // ExportAzContentKeyPolicies creates a file containing all ContentKeyPolicies from an AzureMediaService Subscription
-func ExportAzContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.ContentKeyPolicy, error) {
+func ExportAzContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider, before string, after string) ([]*armmediaservices.ContentKeyPolicy, error) {
 	log.Info("Exporting ContentKeyPolicies")
 
 	// Lookup ContentKeyPolicies
-	contentKeyPolicies, err := azSp.lookupContentKeyPolicies(ctx)
+	contentKeyPolicies, err := azSp.lookupContentKeyPolicies(ctx, before, after)
 	if err != nil {
 		return contentKeyPolicies, fmt.Errorf("encountered error while exporting ConentKeyPolicies from Azure: %v", err)
 	}
@@ -26,11 +26,11 @@ func ExportAzContentKeyPolicies(ctx context.Context, azSp *AzureServiceProvider)
 }
 
 // ExportMkContentKeyPolicies creates a file containing all ContentKeyPolicies from an mk.io Subscription
-func ExportMkContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyPoliciesClient) ([]*armmediaservices.ContentKeyPolicy, error) {
+func ExportMkContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyPoliciesClient, before string, after string) ([]*armmediaservices.ContentKeyPolicy, error) {
 	log.Info("Exporting ContentKeyPolicies")
 
 	// Lookup ContentKeyPolicies
-	contentKeyPolicies, err := client.LookupContentKeyPolicies(ctx)
+	contentKeyPolicies, err := client.LookupContentKeyPolicies(ctx, before, after)
 	if err != nil {
 		return contentKeyPolicies, fmt.Errorf("encountered error while exporting ConentKeyPolicies from mk.io: %v", err)
 	}

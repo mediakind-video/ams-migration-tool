@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices"
 )
 
@@ -288,6 +289,17 @@ func (client *StreamingLocatorsClient) listCreateRequest(ctx context.Context, op
 	if err != nil {
 		return nil, err
 	}
+
+	// Apply filters to query
+	filter := ""
+	if options.Filter != nil {
+		filter = `$filter=` + *options.Filter
+	}
+	q, err := url.ParseQuery(filter)
+	if err == nil {
+		path = path + "?" + q.Encode()
+	}
+
 	req, err := http.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -314,9 +326,18 @@ func (client *StreamingLocatorsClient) listHandleResponse(resp *http.Response) (
 }
 
 // lookupStreamingLocators Get streaming locators from mk.io. Remove pagination
-func (client *StreamingLocatorsClient) LookupStreamingLocators(ctx context.Context) ([]*armmediaservices.StreamingLocator, error) {
+func (client *StreamingLocatorsClient) LookupStreamingLocators(ctx context.Context, before string, after string) ([]*armmediaservices.StreamingLocator, error) {
 
-	req, err := client.List(ctx, nil)
+	// Generate the filter
+	filter := generateFilter(before, after)
+
+	// If we have a filter apply it
+	options := &armmediaservices.StreamingLocatorsClientListOptions{Orderby: to.Ptr("properties/created")}
+	if filter != "" {
+		options.Filter = to.Ptr(filter)
+	}
+
+	req, err := client.List(ctx, options)
 	if err != nil {
 		return nil, err
 	}

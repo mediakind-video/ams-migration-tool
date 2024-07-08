@@ -22,6 +22,8 @@ var (
 	mkExportSubscription string
 	migrationFile        string
 	apiEndpoint          string
+	createdBefore        string
+	createdAfter         string
 
 	debug             bool
 	importResources   bool
@@ -146,7 +148,7 @@ var rootCmd = &cobra.Command{
 
 				// Handle Assets
 				if assets {
-					assetList, err := migrate.ExportAzAssets(ctx, azureClient)
+					assetList, err := migrate.ExportAzAssets(ctx, azureClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting assets: %v", err)
 					}
@@ -167,7 +169,7 @@ var rootCmd = &cobra.Command{
 
 				// Handle Streaming Policies. These are used by StreamingLocators, so do it first
 				if streamingPolicies {
-					sp, err := migrate.ExportAzStreamingPolicies(ctx, azureClient)
+					sp, err := migrate.ExportAzStreamingPolicies(ctx, azureClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting streaming policies: %v", err)
 					}
@@ -176,7 +178,7 @@ var rootCmd = &cobra.Command{
 
 				// Handle StreamingLocators.
 				if streamingLocators {
-					streamingLocatorsList, err := migrate.ExportAzStreamingLocators(ctx, azureClient)
+					streamingLocatorsList, err := migrate.ExportAzStreamingLocators(ctx, azureClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting streaming locators: %v", err)
 					}
@@ -195,7 +197,7 @@ var rootCmd = &cobra.Command{
 				}
 				// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
 				if contentKeyPolicies {
-					ckp, err := migrate.ExportAzContentKeyPolicies(ctx, azureClient)
+					ckp, err := migrate.ExportAzContentKeyPolicies(ctx, azureClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting content key policies: %v", err)
 					}
@@ -237,7 +239,7 @@ var rootCmd = &cobra.Command{
 
 				// Handle Assets
 				if assets {
-					assetList, err := migrate.ExportMkAssets(ctx, mkExportAssetsClient)
+					assetList, err := migrate.ExportMkAssets(ctx, mkExportAssetsClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting assets: %v", err)
 					}
@@ -258,7 +260,7 @@ var rootCmd = &cobra.Command{
 
 				// Handle Streaming Policies. These are used by StreamingLocators, so do it first
 				if streamingPolicies {
-					sp, err := migrate.ExportMkStreamingPolicies(ctx, mkExportStreamingPoliciesClient)
+					sp, err := migrate.ExportMkStreamingPolicies(ctx, mkExportStreamingPoliciesClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting streaming policies: %v", err)
 					}
@@ -267,7 +269,7 @@ var rootCmd = &cobra.Command{
 
 				// // Handle StreamingLocators.
 				if streamingLocators {
-					streamingLocatorsList, err := migrate.ExportMkStreamingLocators(ctx, mkExportStreamingLocatorsClient)
+					streamingLocatorsList, err := migrate.ExportMkStreamingLocators(ctx, mkExportStreamingLocatorsClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting streaming locators: %v", err)
 					}
@@ -286,7 +288,7 @@ var rootCmd = &cobra.Command{
 				}
 				// // Handle StreamingEndpoints. Switching to handle as part of assets. They are related
 				if contentKeyPolicies {
-					ckp, err := migrate.ExportMkContentKeyPolicies(ctx, mkExportContentKeyPoliciesClient)
+					ckp, err := migrate.ExportMkContentKeyPolicies(ctx, mkExportContentKeyPoliciesClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting content key policies: %v", err)
 					}
@@ -409,6 +411,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&mkImportSubscription, "mediakind-import-subscription", "", "Mediakind Subscription ID for import in mk.io")
 	rootCmd.PersistentFlags().StringVar(&mkExportSubscription, "mediakind-export-subscription", "", "Mediakind Subscription ID for export in mk.io")
 	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "https://api.mk.io", "mk.io API endpoint")
+	rootCmd.PersistentFlags().StringVar(&createdBefore, "created-before", "", "filter export for resources created before date")
+	rootCmd.PersistentFlags().StringVar(&createdAfter, "created-after", "", "filter export for resources created after date")
 
 	rootCmd.PersistentFlags().StringVar(&migrationFile, "migration-file", "", "Migration filename")
 

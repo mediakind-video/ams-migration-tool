@@ -2,6 +2,7 @@ package mkiosdk
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -14,6 +15,25 @@ type MkioClient struct {
 	subscriptionName string
 	token            string
 	hc               *http.Client
+}
+
+func generateFilter(before string, after string) string {
+	filter := ""
+	// Handle after date
+	if after != "" {
+		filter = fmt.Sprintf("properties/created gt %s", after)
+	}
+	// Before & after. Add an and in between
+	if before != "" && after != "" {
+		filter = fmt.Sprintf("%s and", filter)
+	}
+	// Handle before date
+	if before != "" && after == "" {
+		filter = fmt.Sprintf("properties/created lt %s", before)
+	} else if before != "" {
+		filter = fmt.Sprintf("%s properties/created lt %s", filter, before)
+	}
+	return filter
 }
 
 type ClientOptions struct {

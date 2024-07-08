@@ -10,11 +10,11 @@ import (
 )
 
 // ExportAzAssets creates a file containing all Assets from an AzureMediaService Subscription
-func ExportAzAssets(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.Asset, error) {
+func ExportAzAssets(ctx context.Context, azSp *AzureServiceProvider, before string, after string) ([]*armmediaservices.Asset, error) {
 	log.Info("Exporting Assets")
 
 	// Lookup Assets
-	assets, err := azSp.lookupAssets(ctx)
+	assets, err := azSp.lookupAssets(ctx, before, after)
 	if err != nil {
 		return assets, fmt.Errorf("encountered error while exporting assets from Azure: %v", err)
 	}
@@ -23,11 +23,11 @@ func ExportAzAssets(ctx context.Context, azSp *AzureServiceProvider) ([]*armmedi
 }
 
 // ExportMkAssets creates a file containing all Assets from a mk.io Subscription
-func ExportMkAssets(ctx context.Context, client *mkiosdk.AssetsClient) ([]*armmediaservices.Asset, error) {
+func ExportMkAssets(ctx context.Context, client *mkiosdk.AssetsClient, before string, after string) ([]*armmediaservices.Asset, error) {
 	log.Info("Exporting Assets")
 
 	// Lookup Assets
-	assets, err := client.LookupAssets(ctx)
+	assets, err := client.LookupAssets(ctx, before, after)
 	if err != nil {
 		return assets, fmt.Errorf("encountered error while exporting assets from mk.io : %v", err)
 	}
