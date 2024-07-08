@@ -12,11 +12,11 @@ import (
 )
 
 // ExportAzStreamingLocators creates a file containing all StreamingLocators from an AzureMediaService Subscription
-func ExportAzStreamingLocators(ctx context.Context, azSp *AzureServiceProvider) ([]*armmediaservices.StreamingLocator, error) {
+func ExportAzStreamingLocators(ctx context.Context, azSp *AzureServiceProvider, before string, after string) ([]*armmediaservices.StreamingLocator, error) {
 	log.Info("Exporting Streaming Locators")
 
 	// Lookup StreamingLocators
-	sl, err := azSp.lookupStreamingLocators(ctx)
+	sl, err := azSp.lookupStreamingLocators(ctx, before, after)
 	if err != nil {
 		return sl, fmt.Errorf("encountered error while exporting StreamingLocators From Azure: %v", err)
 	}
@@ -25,11 +25,11 @@ func ExportAzStreamingLocators(ctx context.Context, azSp *AzureServiceProvider) 
 }
 
 // ExportMkStreamingLocators creates a file containing all StreamingLocators from a mk.io Subscription
-func ExportMkStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocatorsClient) ([]*armmediaservices.StreamingLocator, error) {
+func ExportMkStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocatorsClient, before string, after string) ([]*armmediaservices.StreamingLocator, error) {
 	log.Info("Exporting Streaming Locators")
 
 	// Lookup StreamingLocators
-	sl, err := client.LookupStreamingLocators(ctx)
+	sl, err := client.LookupStreamingLocators(ctx, before, after)
 	if err != nil {
 		return sl, fmt.Errorf("encountered error while exporting StreamingLocators From mk.io: %v", err)
 	}

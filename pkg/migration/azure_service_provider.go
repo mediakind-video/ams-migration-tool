@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
@@ -85,11 +86,37 @@ func NewAzureServiceProvider(subscription string, resourceGroup string, accountN
 	}, nil
 }
 
+func generateFilter(before string, after string) string {
+	filter := ""
+	// Handle after date
+	if after != "" {
+		filter = fmt.Sprintf("properties/created gt %s", after)
+	}
+	// Before & after. Add an and in between
+	if before != "" && after != "" {
+		filter = fmt.Sprintf("%s and", filter)
+	}
+	// Handle before date
+	if before != "" {
+		filter = fmt.Sprintf("%s properties/created lt %s", filter, before)
+	}
+	return filter
+}
+
 // lookupAssets  Get assets from Azure MediaServices. Remove pagination
-func (a *AzureServiceProvider) lookupAssets(ctx context.Context) ([]*armmediaservices.Asset, error) {
+func (a *AzureServiceProvider) lookupAssets(ctx context.Context, before string, after string) ([]*armmediaservices.Asset, error) {
 	client := a.assetsClient
 
-	pager := client.NewListPager(a.resourceGroup, a.accountName, nil)
+	// Generate the filter
+	filter := generateFilter(before, after)
+
+	// If we have a filter apply it
+	options := &armmediaservices.AssetsClientListOptions{Orderby: to.Ptr("properties/created")}
+	if filter != "" {
+		options.Filter = to.Ptr(filter)
+	}
+
+	pager := client.NewListPager(a.resourceGroup, a.accountName, options)
 
 	assets := []*armmediaservices.Asset{}
 
@@ -130,11 +157,20 @@ func (a *AzureServiceProvider) lookupAssetFilters(ctx context.Context, assetName
 }
 
 // lookupStreamingLocators Get StreamingLocators from Azure MediaServices. Remove pagination
-func (a *AzureServiceProvider) lookupStreamingLocators(ctx context.Context) ([]*armmediaservices.StreamingLocator, error) {
+func (a *AzureServiceProvider) lookupStreamingLocators(ctx context.Context, before string, after string) ([]*armmediaservices.StreamingLocator, error) {
 	client := a.streamingLocatorsClient
 	sl := []*armmediaservices.StreamingLocator{}
 
-	pager := client.NewListPager(a.resourceGroup, a.accountName, nil)
+	// Generate the filter
+	filter := generateFilter(before, after)
+
+	// If we have a filter apply it
+	options := &armmediaservices.StreamingLocatorsClientListOptions{Orderby: to.Ptr("properties/created")}
+	if filter != "" {
+		options.Filter = to.Ptr(filter)
+	}
+
+	pager := client.NewListPager(a.resourceGroup, a.accountName, options)
 
 	// Paginated result. We just need a list. loop through and generate that list
 	for pager.More() {
@@ -157,11 +193,20 @@ func (a *AzureServiceProvider) lookupStreamingLocators(ctx context.Context) ([]*
 }
 
 // lookupStreamingPolicies Get StreamingPolicies from Azure MediaServices. Remove pagination
-func (a *AzureServiceProvider) lookupStreamingPolicies(ctx context.Context) ([]*armmediaservices.StreamingPolicy, error) {
+func (a *AzureServiceProvider) lookupStreamingPolicies(ctx context.Context, before string, after string) ([]*armmediaservices.StreamingPolicy, error) {
 	client := a.streamingPoliciesClient
 	sp := []*armmediaservices.StreamingPolicy{}
 
-	pager := client.NewListPager(a.resourceGroup, a.accountName, nil)
+	// Generate the filter
+	filter := generateFilter(before, after)
+
+	// If we have a filter apply it
+	options := &armmediaservices.StreamingPoliciesClientListOptions{Orderby: to.Ptr("properties/created")}
+	if filter != "" {
+		options.Filter = to.Ptr(filter)
+	}
+
+	pager := client.NewListPager(a.resourceGroup, a.accountName, options)
 
 	// Paginated result. We just need a list. loop through and generate that list
 	for pager.More() {
@@ -209,10 +254,19 @@ func (a *AzureServiceProvider) lookupStreamingEndpoints(ctx context.Context) ([]
 }
 
 // lookupContentKeyPolicies Get contentKeyPolicy from Azure MediaServices. Remove pagination
-func (a *AzureServiceProvider) lookupContentKeyPolicies(ctx context.Context) ([]*armmediaservices.ContentKeyPolicy, error) {
+func (a *AzureServiceProvider) lookupContentKeyPolicies(ctx context.Context, before string, after string) ([]*armmediaservices.ContentKeyPolicy, error) {
 	client := a.contentKeyPoliciesClient
 
-	pager := client.NewListPager(a.resourceGroup, a.accountName, nil)
+	// Generate the filter
+	filter := generateFilter(before, after)
+
+	// If we have a filter apply it
+	options := &armmediaservices.ContentKeyPoliciesClientListOptions{Orderby: to.Ptr("properties/created")}
+	if filter != "" {
+		options.Filter = to.Ptr(filter)
+	}
+
+	pager := client.NewListPager(a.resourceGroup, a.accountName, options)
 
 	ckp := []*armmediaservices.ContentKeyPolicy{}
 

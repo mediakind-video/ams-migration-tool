@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices"
 )
 
@@ -286,6 +287,17 @@ func (client *ContentKeyPoliciesClient) listCreateRequest(ctx context.Context, o
 	if err != nil {
 		return nil, err
 	}
+
+	// Apply filters to query
+	filter := ""
+	if options.Filter != nil {
+		filter = `$filter=` + *options.Filter
+	}
+	q, err := url.ParseQuery(filter)
+	if err == nil {
+		path = path + "?" + q.Encode()
+	}
+
 	req, err := http.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -310,9 +322,17 @@ func (client *ContentKeyPoliciesClient) listHandleResponse(resp *http.Response) 
 }
 
 // lookupContentKeyPolicies  Get content key policies from mk.io
-func (client *ContentKeyPoliciesClient) LookupContentKeyPolicies(ctx context.Context) ([]*armmediaservices.ContentKeyPolicy, error) {
+func (client *ContentKeyPoliciesClient) LookupContentKeyPolicies(ctx context.Context, before string, after string) ([]*armmediaservices.ContentKeyPolicy, error) {
+	// Generate the filter
+	filter := generateFilter(before, after)
 
-	req, err := client.List(ctx, nil)
+	// If we have a filter apply it
+	options := &armmediaservices.ContentKeyPoliciesClientListOptions{Orderby: to.Ptr("properties/created")}
+	if filter != "" {
+		options.Filter = to.Ptr(filter)
+	}
+
+	req, err := client.List(ctx, options)
 	if err != nil {
 		return nil, err
 	}
