@@ -37,7 +37,7 @@ func ExportMkStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPol
 }
 
 // ImportStreamingPolicies reads a file containing StreamingPolicies in JSON format. Insert each asset into MKIO
-func ImportStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPoliciesClient, streamingPolicies []*armmediaservices.StreamingPolicy, overwrite bool) error {
+func ImportStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPoliciesClient, streamingPolicies []*armmediaservices.StreamingPolicy, overwrite bool) (int, int, []string, error) {
 	log.Info("Importing Streaming Policy")
 
 	// Some values to output at the end
@@ -88,7 +88,7 @@ func ImportStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPolic
 	log.Infof("Imported %d streamingPolicies", successCount)
 
 	if len(failedSP) > 0 {
-		return fmt.Errorf("failed to import %d StreamingPolicies: %v", len(failedSP), failedSP)
+		return successCount, skipped, failedSP, fmt.Errorf("failed to import %d StreamingPolicies: %v", len(failedSP), failedSP)
 	}
-	return nil
+	return successCount, skipped, failedSP, nil
 }

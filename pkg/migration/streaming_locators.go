@@ -38,7 +38,8 @@ func ExportMkStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLoc
 }
 
 // ImportStreamingLocators reads a file containing StreamingLocators in JSON format. Insert each asset into MKIO
-func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocatorsClient, streamingLocators []*armmediaservices.StreamingLocator, overwrite bool) error {
+func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocatorsClient, streamingLocators []*armmediaservices.StreamingLocator, overwrite bool) (int, int, []string, error) {
+
 	log.Info("Importing Streaming Locators")
 
 	// Some values to output at the end
@@ -94,9 +95,9 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 	log.Infof("Imported %d streamingLocators", successCount)
 
 	if len(failedSL) > 0 {
-		return fmt.Errorf("failed to import %d StreamingLocators: %v", len(failedSL), failedSL)
+		return successCount, skipped, failedSL, fmt.Errorf("failed to import %d StreamingLocators: %v", len(failedSL), failedSL)
 	}
-	return nil
+	return successCount, skipped, failedSL, nil
 }
 
 // ValidateStreamingLocators validates that streaming locators exist in MKIO and produce output.

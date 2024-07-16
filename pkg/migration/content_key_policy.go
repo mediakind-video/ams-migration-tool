@@ -39,7 +39,7 @@ func ExportMkContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyP
 }
 
 // ImportContentKeyPolicies reads a file containing ContentKeyPolicies in JSON format. Insert each ContentKeyPolicy into MKIO
-func ImportContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyPoliciesClient, contentKeyPolicies []*armmediaservices.ContentKeyPolicy, overwrite bool, fairplayAmsCompatibility bool) error {
+func ImportContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyPoliciesClient, contentKeyPolicies []*armmediaservices.ContentKeyPolicy, overwrite bool, fairplayAmsCompatibility bool) (int, int, []string, error) {
 	log.Info("Importing ContentKeyPolicies")
 
 	failedContentKeyPolicies := []string{}
@@ -109,10 +109,10 @@ func ImportContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyPol
 	log.Infof("Imported %d ContentKeyPolicies", successCount)
 
 	if len(failedContentKeyPolicies) > 0 {
-		return fmt.Errorf("failed to import %d ContentKeyPolicies: %v", len(failedContentKeyPolicies), failedContentKeyPolicies)
+		return successCount, skipped, failedContentKeyPolicies, fmt.Errorf("failed to import %d ContentKeyPolicies: %v", len(failedContentKeyPolicies), failedContentKeyPolicies)
 	}
 
-	return nil
+	return successCount, skipped, failedContentKeyPolicies, nil
 }
 
 // ValidateContentKeyPolicies TODO

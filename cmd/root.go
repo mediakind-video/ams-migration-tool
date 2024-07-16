@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"text/tabwriter"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -25,6 +26,8 @@ var (
 	createdBefore        string
 	createdAfter         string
 
+	workers int
+
 	debug             bool
 	importResources   bool
 	exportResources   bool
@@ -40,6 +43,24 @@ var (
 
 	fairplayAmsCompatibility bool
 )
+
+const ASSETS = "assets"
+const ASSETFILTERS = "assetFilters"
+const STREAMINGPOLICIES = "streamingPolicies"
+const STREAMINGLOCATORS = "streamingLocators"
+const STREAMINGENDPOINTS = "streamingEndpoints"
+const CONTENTKEYPOLICIES = "contentKeyPolicies"
+const EXPORT = "export"
+const IMPORT = "import"
+
+type results struct {
+	resource  string
+	operation string
+	duration  time.Duration
+	failures  []string
+	skipped   int
+	migrated  int
+}
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -57,6 +78,7 @@ var rootCmd = &cobra.Command{
 			log.SetLevel(log.DebugLevel)
 		}
 
+		var timings []results
 		// If we don't export,import,validate what do we do?
 		if !exportResources && !importResources && !validateResources {
 			log.Fatal("Please select a valid command: [import|export|validate]")
@@ -148,59 +170,81 @@ var rootCmd = &cobra.Command{
 
 				// Handle Assets
 				if assets {
+					start := time.Now()
 					assetList, err := migrate.ExportAzAssets(ctx, azureClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting assets: %v", err)
 					}
 
 					migrationContents.Assets = assetList
+					timings = append(timings, results{resource: ASSETS, operation: EXPORT, duration: time.Since(start), migrated: len(assetList)})
 
 					// Handle Asset Filters -- Can only do this if we have a list of assets
 					if assetFilters {
-						assetFiltersList, err := migrate.ExportAzAssetFilters(ctx, azureClient, assetList)
+						start = time.Now()
+						assetFiltersList, err := migrate.ExportAzAssetFilters(ctx, azureClient, assetList, workers)
 						if err != nil {
 							log.Errorf("error exporting asset filters: %v", err)
 						}
-
+						count := 0
+						// How many did we export?
+						for _, v := range assetFiltersList {
+							count = count + len(v)
+						}
 						migrationContents.AssetFilters = assetFiltersList
 
+						timings = append(timings, results{resource: ASSETFILTERS, operation: EXPORT, duration: time.Since(start), migrated: count})
 					}
 				}
 
 				// Handle Streaming Policies. These are used by StreamingLocators, so do it first
 				if streamingPolicies {
+					start := time.Now()
+
 					sp, err := migrate.ExportAzStreamingPolicies(ctx, azureClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting streaming policies: %v", err)
 					}
+
+					timings = append(timings, results{resource: STREAMINGPOLICIES, operation: EXPORT, duration: time.Since(start), migrated: len(sp)})
+
 					migrationContents.StreamingPolicies = sp
 				}
 
 				// Handle StreamingLocators.
 				if streamingLocators {
+					start := time.Now()
 					streamingLocatorsList, err := migrate.ExportAzStreamingLocators(ctx, azureClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting streaming locators: %v", err)
 					}
+
+					timings = append(timings, results{resource: STREAMINGLOCATORS, operation: EXPORT, duration: time.Since(start), migrated: len(streamingLocatorsList)})
 
 					migrationContents.StreamingLocators = streamingLocatorsList
 				}
 
 				// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
 				if streamingEndpoints {
+					start := time.Now()
 					se, err := migrate.ExportAzStreamingEndpoints(ctx, azureClient)
 					if err != nil {
 						log.Errorf("error exporting streaming locators: %v", err)
 					}
 
+					timings = append(timings, results{resource: STREAMINGENDPOINTS, operation: EXPORT, duration: time.Since(start), migrated: len(se)})
+
 					migrationContents.StreamingEndpoints = se
 				}
 				// Handle StreamingEndpoints. Switching to handle as part of assets. They are related
 				if contentKeyPolicies {
+					start := time.Now()
 					ckp, err := migrate.ExportAzContentKeyPolicies(ctx, azureClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting content key policies: %v", err)
 					}
+
+					timings = append(timings, results{resource: CONTENTKEYPOLICIES, operation: EXPORT, duration: time.Since(start), migrated: len(ckp)})
 					migrationContents.ContentKeyPolicies = ckp
 				}
 			} else if mkExportSubscription != "" {
@@ -239,20 +283,27 @@ var rootCmd = &cobra.Command{
 
 				// Handle Assets
 				if assets {
+					start := time.Now()
 					assetList, err := migrate.ExportMkAssets(ctx, mkExportAssetsClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting assets: %v", err)
 					}
-
+					timings = append(timings, results{resource: ASSETS, operation: EXPORT, duration: time.Since(start), migrated: len(assetList)})
 					migrationContents.Assets = assetList
 
 					// Handle Asset Filters -- Can only do this if we have a list of assets
 					if assetFilters {
+						start = time.Now()
 						assetFiltersList, err := migrate.ExportMkAssetFilters(ctx, mkExportAssetFiltersClient, assetList)
 						if err != nil {
 							log.Errorf("error exporting asset filters: %v", err)
 						}
-
+						count := 0
+						// How many did we export?
+						for _, v := range assetFiltersList {
+							count = count + len(v)
+						}
+						timings = append(timings, results{resource: ASSETFILTERS, operation: EXPORT, duration: time.Since(start), migrated: count})
 						migrationContents.AssetFilters = assetFiltersList
 
 					}
@@ -260,38 +311,46 @@ var rootCmd = &cobra.Command{
 
 				// Handle Streaming Policies. These are used by StreamingLocators, so do it first
 				if streamingPolicies {
+					start := time.Now()
 					sp, err := migrate.ExportMkStreamingPolicies(ctx, mkExportStreamingPoliciesClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting streaming policies: %v", err)
 					}
+					timings = append(timings, results{resource: STREAMINGPOLICIES, operation: EXPORT, duration: time.Since(start), migrated: len(sp)})
+
 					migrationContents.StreamingPolicies = sp
 				}
 
-				// // Handle StreamingLocators.
+				// Handle StreamingLocators.
 				if streamingLocators {
+					start := time.Now()
 					streamingLocatorsList, err := migrate.ExportMkStreamingLocators(ctx, mkExportStreamingLocatorsClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting streaming locators: %v", err)
 					}
-
+					timings = append(timings, results{resource: STREAMINGLOCATORS, operation: EXPORT, duration: time.Since(start), migrated: len(streamingLocatorsList)})
 					migrationContents.StreamingLocators = streamingLocatorsList
 				}
 
 				// // Handle StreamingEndpoints. Switching to handle as part of assets. They are related
 				if streamingEndpoints {
+					start := time.Now()
 					se, err := migrate.ExportMkStreamingEndpoints(ctx, mkExportStreamingEndpointsClient)
 					if err != nil {
 						log.Errorf("error exporting streaming locators: %v", err)
 					}
+					timings = append(timings, results{resource: STREAMINGENDPOINTS, operation: EXPORT, duration: time.Since(start), migrated: len(se)})
 
 					migrationContents.StreamingEndpoints = se
 				}
 				// // Handle StreamingEndpoints. Switching to handle as part of assets. They are related
 				if contentKeyPolicies {
+					start := time.Now()
 					ckp, err := migrate.ExportMkContentKeyPolicies(ctx, mkExportContentKeyPoliciesClient, createdBefore, createdAfter)
 					if err != nil {
 						log.Errorf("error exporting content key policies: %v", err)
 					}
+					timings = append(timings, results{resource: CONTENTKEYPOLICIES, operation: EXPORT, duration: time.Since(start), migrated: len(ckp)})
 					migrationContents.ContentKeyPolicies = ckp
 				}
 				// } else {
@@ -320,49 +379,61 @@ var rootCmd = &cobra.Command{
 
 			// Handling ConentKeyPolicies. This should happen before StreamingLocators
 			if contentKeyPolicies {
-				err := migrate.ImportContentKeyPolicies(ctx, mkImportContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite, fairplayAmsCompatibility)
+				start := time.Now()
+				success, skipped, failureList, err := migrate.ImportContentKeyPolicies(ctx, mkImportContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite, fairplayAmsCompatibility)
 				if err != nil {
 					log.Errorf("error importing content key policies: %v", err)
 				}
+				timings = append(timings, results{resource: CONTENTKEYPOLICIES, operation: IMPORT, duration: time.Since(start), skipped: skipped, failures: failureList, migrated: success})
 			}
 
 			// Handling Assets
 			if assets {
-				err := migrate.ImportAssets(ctx, mkImportAssetsClient, contents.Assets, overwrite)
+				start := time.Now()
+				success, skipped, failureList, err := migrate.ImportAssets(ctx, mkImportAssetsClient, contents.Assets, overwrite)
 				if err != nil {
 					log.Errorf("error importing assets: %v", err)
 				}
+				timings = append(timings, results{resource: ASSETS, operation: IMPORT, duration: time.Since(start), skipped: skipped, failures: failureList, migrated: success})
 			}
 
 			// Handling Asset Filters. These require an asset, so import after assets
 			if assetFilters {
-				err := migrate.ImportAssetFilters(ctx, mkImportAssetFiltersClient, contents.AssetFilters, overwrite)
+				start := time.Now()
+				success, skipped, failureList, err := migrate.ImportAssetFilters(ctx, mkImportAssetFiltersClient, contents.AssetFilters, overwrite)
 				if err != nil {
 					log.Errorf("error importing asset filters: %v", err)
 				}
+				timings = append(timings, results{resource: ASSETFILTERS, operation: IMPORT, duration: time.Since(start), skipped: skipped, failures: failureList, migrated: success})
 			}
 
 			// Handling StreamingPolicies
 			if streamingPolicies {
-				err := migrate.ImportStreamingPolicies(ctx, mkImportStreamingPoliciesClient, contents.StreamingPolicies, overwrite)
+				start := time.Now()
+				success, skipped, failureList, err := migrate.ImportStreamingPolicies(ctx, mkImportStreamingPoliciesClient, contents.StreamingPolicies, overwrite)
 				if err != nil {
 					log.Errorf("error importing streaming policies: %v", err)
 				}
+				timings = append(timings, results{resource: STREAMINGPOLICIES, operation: IMPORT, duration: time.Since(start), skipped: skipped, failures: failureList, migrated: success})
 			}
 			// Handling StreamingLocators
 			if streamingLocators {
-				err := migrate.ImportStreamingLocators(ctx, mkImportStreamingLocatorsClient, contents.StreamingLocators, overwrite)
+				start := time.Now()
+				success, skipped, failureList, err := migrate.ImportStreamingLocators(ctx, mkImportStreamingLocatorsClient, contents.StreamingLocators, overwrite)
 				if err != nil {
 					log.Errorf("error importing streaming locators: %v", err)
 				}
+				timings = append(timings, results{resource: STREAMINGLOCATORS, operation: IMPORT, duration: time.Since(start), skipped: skipped, failures: failureList, migrated: success})
 			}
 
 			// Handling StreamingEndpoints
 			if streamingEndpoints {
-				err := migrate.ImportStreamingEndpoints(ctx, mkImportStreamingEndpointsClient, contents.StreamingEndpoints, overwrite)
+				start := time.Now()
+				success, skipped, failureList, err := migrate.ImportStreamingEndpoints(ctx, mkImportStreamingEndpointsClient, contents.StreamingEndpoints, overwrite)
 				if err != nil {
 					log.Errorf("error importing streaming endpoints: %v", err)
 				}
+				timings = append(timings, results{resource: STREAMINGENDPOINTS, operation: IMPORT, duration: time.Since(start), skipped: skipped, failures: failureList, migrated: success})
 			}
 		}
 
@@ -386,6 +457,27 @@ var rootCmd = &cobra.Command{
 				if err != nil {
 					log.Errorf("error validating streamingLocators: %v", err)
 				}
+			}
+		}
+
+		// Write out results
+		fmt.Println("Results:")
+		w := tabwriter.NewWriter(os.Stdout, 1, 1, 1, ' ', 0)
+		_, _ = fmt.Fprintf(w, "Operation\tResource\tMigrated\tSkipped\tFailed\tDuration\n")
+		for _, v := range timings {
+			// Some output to give stats at the end
+			if v.operation == EXPORT {
+				_, _ = fmt.Fprintf(w, "%v\t%v\t%d\t-\t-\t%v\n", v.operation, v.resource, v.migrated, v.duration)
+			} else if v.operation == IMPORT {
+				_, _ = fmt.Fprintf(w, "%v\t%v\t%d\t%d\t%d\t%v\n", v.operation, v.resource, v.migrated, v.skipped, len(v.failures), v.duration)
+			}
+		}
+		w.Flush()
+
+		fmt.Println("\nFailures:")
+		for _, v := range timings {
+			if len(v.failures) > 0 {
+				fmt.Printf("\tFailed to %v %v: %v\n", v.operation, v.resource, v.failures)
 			}
 		}
 	},
@@ -413,6 +505,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&apiEndpoint, "api-endpoint", "https://api.mk.io", "mk.io API endpoint")
 	rootCmd.PersistentFlags().StringVar(&createdBefore, "created-before", "", "filter export for resources created before date")
 	rootCmd.PersistentFlags().StringVar(&createdAfter, "created-after", "", "filter export for resources created after date")
+	rootCmd.PersistentFlags().IntVar(&workers, "workers", 1, "number of workers to run in parallel")
 
 	rootCmd.PersistentFlags().StringVar(&migrationFile, "migration-file", "", "Migration filename")
 
