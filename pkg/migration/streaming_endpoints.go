@@ -37,7 +37,7 @@ func ExportMkStreamingEndpoints(ctx context.Context, client *mkiosdk.StreamingEn
 }
 
 // ImportStreamingEndpoints reads a file containing StreamingEndpoints in JSON format. Insert each asset into MKIO
-func ImportStreamingEndpoints(ctx context.Context, client *mkiosdk.StreamingEndpointsClient, streamingEndpoints []*armmediaservices.StreamingEndpoint, overwrite bool) error {
+func ImportStreamingEndpoints(ctx context.Context, client *mkiosdk.StreamingEndpointsClient, streamingEndpoints []*armmediaservices.StreamingEndpoint, overwrite bool) (int, int, []string, error) {
 	log.Info("Importing Streaming Endpoints")
 
 	// Some values to output at the end
@@ -115,7 +115,7 @@ func ImportStreamingEndpoints(ctx context.Context, client *mkiosdk.StreamingEndp
 	log.Infof("Imported %d streamingEndpoints", successCount)
 
 	if len(failedSE) > 0 {
-		return fmt.Errorf("failed to import %d StreamingEndpoints: %v", len(failedSE), failedSE)
+		return successCount, skipped, failedSE, fmt.Errorf("failed to import %d StreamingEndpoints: %v", len(failedSE), failedSE)
 	}
-	return nil
+	return successCount, skipped, failedSE, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -119,7 +120,6 @@ func (a *AzureServiceProvider) lookupAssets(ctx context.Context, before string, 
 	pager := client.NewListPager(a.resourceGroup, a.accountName, options)
 
 	assets := []*armmediaservices.Asset{}
-
 	// We get pages back. Loop through pages and create a list of assets
 	for pager.More() {
 		nextResult, err := pager.NextPage(ctx)
@@ -132,6 +132,23 @@ func (a *AzureServiceProvider) lookupAssets(ctx context.Context, before string, 
 		}
 	}
 	return assets, nil
+}
+
+func (a *AzureServiceProvider) lookupAssetFiltersWorker(ctx context.Context, wg *sync.WaitGroup, jobs chan string, filterChan chan<- map[string][]*armmediaservices.AssetFilter, errorChan chan<- string) {
+	for assetName := range jobs {
+		// azSp.lookupAssetFiltersInParallel(ctx, *a.Name, filterChan, skippedChan)
+		filters, err := a.lookupAssetFilters(ctx, assetName)
+		if err != nil {
+			errorChan <- assetName
+		}
+		if len(filters) != 0 {
+			filterMap := map[string][]*armmediaservices.AssetFilter{}
+			filterMap[assetName] = filters
+			filterChan <- filterMap
+		}
+		// fmt.Printf("Done exporting AssetFilters for %v\n", assetName)
+		wg.Done()
+	}
 }
 
 // lookupAssetFilters  Get asset filters from Azure MediaServices. Remove pagination
@@ -149,7 +166,7 @@ func (a *AzureServiceProvider) lookupAssetFilters(ctx context.Context, assetName
 			return assetFilters, fmt.Errorf("failed to advance page: %v", err)
 		}
 		for _, v := range nextResult.Value {
-			// log.Debugf("Id: %s, Name: %s, Type: %s, Container: %s, StorageAccountName: %s, AssetId: %s\n", *v.ID, *v.Name, *v.Type, *v.Properties.Container, *v.Properties.StorageAccountName, *v.Properties.AssetID)
+			log.Debugf("Id: %s, Name: %s, Type: %s\n", *v.ID, *v.Name, *v.Type)
 			assetFilters = append(assetFilters, v)
 		}
 	}

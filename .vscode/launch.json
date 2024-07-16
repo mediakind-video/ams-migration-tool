@@ -17,6 +17,7 @@
                 "--azure-account-name", "$azure_account_name",
                 "--mediakind-import-subscription", "$mkio_subscription1_name",
                 "--mediakind-export-subscription", "$mkio_subscription2_name",
+                "--workers", "10",
                 "--debug",
                 "--overwrite",
                 "--export",

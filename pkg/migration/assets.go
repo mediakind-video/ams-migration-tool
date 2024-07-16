@@ -36,7 +36,7 @@ func ExportMkAssets(ctx context.Context, client *mkiosdk.AssetsClient, before st
 }
 
 // ImportAssets reads a file containing Assets in JSON format. Insert each asset into MKIO
-func ImportAssets(ctx context.Context, client *mkiosdk.AssetsClient, assets []*armmediaservices.Asset, overwrite bool) error {
+func ImportAssets(ctx context.Context, client *mkiosdk.AssetsClient, assets []*armmediaservices.Asset, overwrite bool) (int, int, []string, error) {
 	log.Info("Importing Assets")
 
 	failedAssets := []string{}
@@ -73,10 +73,10 @@ func ImportAssets(ctx context.Context, client *mkiosdk.AssetsClient, assets []*a
 	log.Infof("Imported %d assets", successCount)
 
 	if len(failedAssets) > 0 {
-		return fmt.Errorf("failed to import %d assets: %v", len(failedAssets), failedAssets)
+		return successCount, skipped, failedAssets, fmt.Errorf("failed to import %d assets: %v", len(failedAssets), failedAssets)
 	}
 
-	return nil
+	return successCount, skipped, failedAssets, nil
 }
 
 // ValidateAssets
