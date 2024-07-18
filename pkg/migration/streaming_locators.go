@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"dev.azure.com/mediakind/mkio/ams-migration-tool.git/pkg/mkiosdk"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices"
@@ -22,6 +23,64 @@ func ExportAzStreamingLocators(ctx context.Context, azSp *AzureServiceProvider, 
 	}
 
 	return sl, nil
+}
+
+// ExportAzContentKeys Exports all contentKeys into the StreamingLocators list
+func ExportAzContentKeys(ctx context.Context, azSp *AzureServiceProvider, streamingLocators []*armmediaservices.StreamingLocator, workers int) ([]*armmediaservices.StreamingLocator, error) {
+	log.Info("Exporting Content Keys")
+
+	skipped := []string{}
+
+	// Waitgroup to wait for all goroutines to finish
+	wg := new(sync.WaitGroup)
+
+	// Create channels to communicate between workers
+	contentKeyChan := make(chan map[string][]*armmediaservices.StreamingLocatorContentKey, len(streamingLocators))
+	skippedChan := make(chan string, len(streamingLocators))
+	jobs := make(chan string, len(streamingLocators))
+
+	for w := 1; w <= workers; w++ {
+		log.Infof("Starting ContentKey worker %d", w)
+		go azSp.lookupContentKeysWorker(ctx, wg, jobs, contentKeyChan, skippedChan)
+
+	}
+	// Lookup StreamingLocators
+	for _, sl := range streamingLocators {
+		// Add to waitgroup to wait for all jobs to finish
+		wg.Add(1)
+		// Start a job for the worker to handle
+		jobs <- *sl.Name
+	}
+
+	log.Info("Waiting for ContentKey workers to finish")
+	wg.Wait()
+	log.Info("Done Processing Content Keys")
+
+	close(jobs)
+	close(contentKeyChan)
+
+	for c := range contentKeyChan {
+		for k, v := range c {
+			for _, sl := range streamingLocators {
+				if *sl.Name == k {
+					sl.Properties.ContentKeys = v
+				}
+			}
+		}
+	}
+
+	close(skippedChan)
+	for result := range skippedChan {
+		if result != "" {
+			skipped = append(skipped, result)
+		}
+	}
+
+	if len(skipped) > 0 {
+		return streamingLocators, fmt.Errorf("failed to export %d Content Keys: %v", len(skipped), skipped)
+	}
+
+	return streamingLocators, nil
 }
 
 // ExportMkStreamingLocators creates a file containing all StreamingLocators from a mk.io Subscription

@@ -50,6 +50,7 @@ const STREAMINGPOLICIES = "streamingPolicies"
 const STREAMINGLOCATORS = "streamingLocators"
 const STREAMINGENDPOINTS = "streamingEndpoints"
 const CONTENTKEYPOLICIES = "contentKeyPolicies"
+const CONTENTKEYS = "contentKeys"
 const EXPORT = "export"
 const IMPORT = "import"
 
@@ -220,6 +221,13 @@ var rootCmd = &cobra.Command{
 					}
 
 					timings = append(timings, results{resource: STREAMINGLOCATORS, operation: EXPORT, duration: time.Since(start), migrated: len(streamingLocatorsList)})
+
+					start = time.Now()
+					streamingLocatorsList, err = migrate.ExportAzContentKeys(ctx, azureClient, streamingLocatorsList, workers)
+					if err != nil {
+						log.Errorf("error exporting streaming locators Content Keys: %v", err)
+					}
+					timings = append(timings, results{resource: CONTENTKEYS, operation: EXPORT, duration: time.Since(start), migrated: len(streamingLocatorsList)})
 
 					migrationContents.StreamingLocators = streamingLocatorsList
 				}
