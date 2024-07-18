@@ -136,7 +136,6 @@ func (a *AzureServiceProvider) lookupAssets(ctx context.Context, before string, 
 
 func (a *AzureServiceProvider) lookupAssetFiltersWorker(ctx context.Context, wg *sync.WaitGroup, jobs chan string, filterChan chan<- map[string][]*armmediaservices.AssetFilter, errorChan chan<- string) {
 	for assetName := range jobs {
-		// azSp.lookupAssetFiltersInParallel(ctx, *a.Name, filterChan, skippedChan)
 		filters, err := a.lookupAssetFilters(ctx, assetName)
 		if err != nil {
 			errorChan <- assetName
@@ -146,7 +145,7 @@ func (a *AzureServiceProvider) lookupAssetFiltersWorker(ctx context.Context, wg 
 			filterMap[assetName] = filters
 			filterChan <- filterMap
 		}
-		// fmt.Printf("Done exporting AssetFilters for %v\n", assetName)
+		log.Debugf("Done exporting AssetFilters for %v\n", assetName)
 		wg.Done()
 	}
 }
@@ -186,21 +185,9 @@ func (a *AzureServiceProvider) lookupContentKeysWorker(ctx context.Context, wg *
 			ckMap[slName] = contentKeys.ContentKeys
 			slChan <- ckMap
 		}
-		// fmt.Printf("Done exporting AssetFilters for %v\n", assetName)
+		log.Debugf("Done exporting StreamingLocator's ContentKeys for %v\n", slName)
 		wg.Done()
 	}
-	// client := a.streamingLocatorsClient
-
-	// for _, v := range streamingLocators {
-	// 	contentKeys, err := client.ListContentKeys(ctx, a.resourceGroup, a.accountName, *v.Name, nil)
-	// 	if err != nil {
-	// 		log.Error("Failed to get content keys for streaming locator: ", *v.Name)
-	// 		continue
-	// 	}
-	// 	v.Properties.ContentKeys = contentKeys.ContentKeys
-	// }
-
-	// return streamingLocators, nil
 }
 
 // lookupStreamingLocators Get StreamingLocators from Azure MediaServices. Remove pagination
@@ -226,12 +213,6 @@ func (a *AzureServiceProvider) lookupStreamingLocators(ctx context.Context, befo
 			return sl, fmt.Errorf("failed to advance page: %v", err)
 		}
 		for _, v := range nextResult.Value {
-			// contentKeys, err := client.ListContentKeys(ctx, a.resourceGroup, a.accountName, *v.Name, nil)
-			// if err != nil {
-			// 	log.Error("Failed to get content keys for streaming locator: ", *v.Name)
-			// 	continue
-			// }
-			// v.Properties.ContentKeys = contentKeys.ContentKeys
 			log.Debugf("Id: %s, Name: %s, Type: %s, AssetName: %s, StreamingLocatorID: %s, StreamingPolicyName: %s\n", *v.ID, *v.Name, *v.Type, *v.Properties.AssetName, *v.Properties.StreamingLocatorID, *v.Properties.StreamingPolicyName)
 			sl = append(sl, v)
 		}
