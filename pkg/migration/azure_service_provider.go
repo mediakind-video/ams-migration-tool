@@ -173,6 +173,36 @@ func (a *AzureServiceProvider) lookupAssetFilters(ctx context.Context, assetName
 	return assetFilters, nil
 }
 
+// lookupContentKeys Get ContentKeys from Azure MediaServices for StreamingLocators.
+func (a *AzureServiceProvider) lookupContentKeysWorker(ctx context.Context, wg *sync.WaitGroup, jobs chan string, slChan chan<- map[string][]*armmediaservices.StreamingLocatorContentKey, errorChan chan<- string) {
+	client := a.streamingLocatorsClient
+	for slName := range jobs {
+		contentKeys, err := client.ListContentKeys(ctx, a.resourceGroup, a.accountName, slName, nil)
+		if err != nil {
+			errorChan <- slName
+		}
+		if len(contentKeys.ContentKeys) != 0 {
+			ckMap := map[string][]*armmediaservices.StreamingLocatorContentKey{}
+			ckMap[slName] = contentKeys.ContentKeys
+			slChan <- ckMap
+		}
+		// fmt.Printf("Done exporting AssetFilters for %v\n", assetName)
+		wg.Done()
+	}
+	// client := a.streamingLocatorsClient
+
+	// for _, v := range streamingLocators {
+	// 	contentKeys, err := client.ListContentKeys(ctx, a.resourceGroup, a.accountName, *v.Name, nil)
+	// 	if err != nil {
+	// 		log.Error("Failed to get content keys for streaming locator: ", *v.Name)
+	// 		continue
+	// 	}
+	// 	v.Properties.ContentKeys = contentKeys.ContentKeys
+	// }
+
+	// return streamingLocators, nil
+}
+
 // lookupStreamingLocators Get StreamingLocators from Azure MediaServices. Remove pagination
 func (a *AzureServiceProvider) lookupStreamingLocators(ctx context.Context, before string, after string) ([]*armmediaservices.StreamingLocator, error) {
 	client := a.streamingLocatorsClient
@@ -196,12 +226,12 @@ func (a *AzureServiceProvider) lookupStreamingLocators(ctx context.Context, befo
 			return sl, fmt.Errorf("failed to advance page: %v", err)
 		}
 		for _, v := range nextResult.Value {
-			contentKeys, err := client.ListContentKeys(ctx, a.resourceGroup, a.accountName, *v.Name, nil)
-			if err != nil {
-				log.Error("Failed to get content keys for streaming locator: ", *v.Name)
-				continue
-			}
-			v.Properties.ContentKeys = contentKeys.ContentKeys
+			// contentKeys, err := client.ListContentKeys(ctx, a.resourceGroup, a.accountName, *v.Name, nil)
+			// if err != nil {
+			// 	log.Error("Failed to get content keys for streaming locator: ", *v.Name)
+			// 	continue
+			// }
+			// v.Properties.ContentKeys = contentKeys.ContentKeys
 			log.Debugf("Id: %s, Name: %s, Type: %s, AssetName: %s, StreamingLocatorID: %s, StreamingPolicyName: %s\n", *v.ID, *v.Name, *v.Type, *v.Properties.AssetName, *v.Properties.StreamingLocatorID, *v.Properties.StreamingPolicyName)
 			sl = append(sl, v)
 		}
