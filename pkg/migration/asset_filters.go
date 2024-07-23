@@ -89,13 +89,13 @@ func ExportMkAssetFilters(ctx context.Context, client *mkiosdk.AssetFiltersClien
 }
 
 func ImportAssetFilterWorker(ctx context.Context, client *mkiosdk.AssetFiltersClient, overwrite bool, wg *sync.WaitGroup, jobs chan map[string][]*armmediaservices.AssetFilter, successChan chan string, skippedChan chan string, failedChan chan string) {
-	// wgCount := 0
+
 	for job := range jobs {
 		for assetName, filters := range job {
 			log.Debugf("Importing AssetFilters for Asset: %v\n", assetName)
 			for _, assetFilter := range filters {
 				found := true
-				// Check if asset already exists. Skip update unless overwrite is set
+				// Check if assetFilter already exists. Skip update unless overwrite is set
 				_, err := client.Get(ctx, *assetFilter.Name, nil)
 				if err != nil {
 					if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "Not Found") {
@@ -121,7 +121,7 @@ func ImportAssetFilterWorker(ctx context.Context, client *mkiosdk.AssetFiltersCl
 	}
 }
 
-// ImportAssetFilters reads a file containing AssetFilters in JSON format. Insert each asset into MKIO
+// ImportAssetFilters reads a file containing AssetFilters in JSON format. Insert each asset filter into MKIO
 func ImportAssetFilters(ctx context.Context, client *mkiosdk.AssetFiltersClient, assetFilters map[string][]*armmediaservices.AssetFilter, overwrite bool, workers int) (int, int, []string, error) {
 
 	log.Info("Importing AssetFilters")
@@ -129,6 +129,7 @@ func ImportAssetFilters(ctx context.Context, client *mkiosdk.AssetFiltersClient,
 	// Waitgroup to wait for all goroutines to finish
 	wg := new(sync.WaitGroup)
 
+	// Get total number of filters
 	totalFilters := 0
 	for _, v := range assetFilters {
 		totalFilters += len(v)
@@ -149,8 +150,8 @@ func ImportAssetFilters(ctx context.Context, client *mkiosdk.AssetFiltersClient,
 	failedAssetFilters := []string{}
 	skipped := 0
 	successCount := 0
-	// Create each asset
-	// Go through each key/value in map
+
+	// Create each asset filter
 	for assetName, assetFilterList := range assetFilters {
 		wg.Add(len(assetFilterList))
 		jobs <- map[string][]*armmediaservices.AssetFilter{assetName: assetFilterList}

@@ -36,7 +36,7 @@ func ExportMkAssets(ctx context.Context, client *mkiosdk.AssetsClient, before st
 	return assets, nil
 }
 
-// ImportAssetsWorker reads a file containing Assets in JSON format. Insert each asset into MKIO
+// ImportAssetsWorker - Do the work to import an asset into MKIO
 func ImportAssetsWorker(ctx context.Context, client *mkiosdk.AssetsClient, overwrite bool, wg *sync.WaitGroup, jobs chan *armmediaservices.Asset, successChan chan string, skippedChan chan string, failedChan chan string) {
 
 	for asset := range jobs {
@@ -58,8 +58,8 @@ func ImportAssetsWorker(ctx context.Context, client *mkiosdk.AssetsClient, overw
 
 			_, err = client.CreateOrUpdate(ctx, *asset.Name, asset, nil)
 			if err != nil {
-				failedChan <- *asset.Name
 				log.Errorf("unable to import asset %v: %v", *asset.Name, err)
+				failedChan <- *asset.Name
 			} else {
 				successChan <- *asset.Name
 			}
@@ -90,6 +90,7 @@ func ImportAssets(ctx context.Context, client *mkiosdk.AssetsClient, assets []*a
 	failedAssets := []string{}
 	skipped := 0
 	successCount := 0
+
 	// Create each asset
 	for _, asset := range assets {
 		wg.Add(1)

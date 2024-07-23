@@ -39,12 +39,10 @@ func ExportMkContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyP
 	return contentKeyPolicies, nil
 }
 
-// ImportContentKeyPoliciesWorker reads a file containing ContentKeyPolicies in JSON format. Insert each ContentKeyPolicy into MKIO
+// ImportContentKeyPoliciesWorker - Do work to import Content Key Policies into MKIO
 func ImportContentKeyPoliciesWorker(ctx context.Context, client *mkiosdk.ContentKeyPoliciesClient, overwrite bool, wg *sync.WaitGroup, jobs chan *mkiosdk.FPContentKeyPolicy, successChan chan string, skippedChan chan string, failedChan chan string) {
 
 	for contentKeyPolicy := range jobs {
-		// Create each ContentKeyPolicy
-
 		found := true
 		// Check if ContentKeyPolicy already exists. Skip update unless overwrite is set
 		_, err := client.Get(ctx, *contentKeyPolicy.Name, nil)
@@ -66,12 +64,13 @@ func ImportContentKeyPoliciesWorker(ctx context.Context, client *mkiosdk.Content
 			if err != nil {
 				failedChan <- *contentKeyPolicy.Name
 				log.Errorf("unable to delete old ContentKeyPolicy %v for overwrite: %v", *contentKeyPolicy.Name, err)
+				wg.Done()
+				continue
 			}
 		}
 
 		log.Debugf("Creating ContentKeyPolicy in MKIO: %v", *contentKeyPolicy.Name)
 
-		// TODO do something with this response
 		_, err = client.CreateOrUpdate(ctx, *contentKeyPolicy.Name, contentKeyPolicy, nil)
 		if err != nil {
 			failedChan <- *contentKeyPolicy.Name
@@ -131,6 +130,30 @@ func ImportContentKeyPolicies(ctx context.Context, client *mkiosdk.ContentKeyPol
 	for _, contentKeyPolicy := range fpContentKeyPolicies {
 		wg.Add(1)
 		jobs <- contentKeyPolicy
+	}
+
+	log.Info("Waiting for Content Key Policy workers to finish")
+	wg.Wait()
+	log.Info("Done importing content key policies")
+
+	close(jobs)
+	close(successChan)
+	close(skippedChan)
+	close(failedChan)
+	for f := range successChan {
+		if f != "" {
+			successCount++
+		}
+	}
+	for result := range skippedChan {
+		if result != "" {
+			skipped++
+		}
+	}
+	for result := range failedChan {
+		if result != "" {
+			failedContentKeyPolicies = append(failedContentKeyPolicies, result)
+		}
 	}
 
 	log.Infof("Skipped %d existing ContentKeyPolicies", skipped)

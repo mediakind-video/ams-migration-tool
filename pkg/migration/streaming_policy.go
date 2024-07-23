@@ -37,7 +37,7 @@ func ExportMkStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPol
 	return sl, nil
 }
 
-// ImportStreamingPolicyWorker reads a file containing StreamingPolicies in JSON format. Insert each streaming policy into MKIO
+// ImportStreamingPolicyWorker - Do the work to import a StreamingPolicy into MKIO
 func ImportStreamingPolicyWorker(ctx context.Context, client *mkiosdk.StreamingPoliciesClient, overwrite bool, wg *sync.WaitGroup, jobs chan *armmediaservices.StreamingPolicy, successChan chan string, skippedChan chan string, failedChan chan string) {
 
 	// Create each streamingPolicy
@@ -57,7 +57,7 @@ func ImportStreamingPolicyWorker(ctx context.Context, client *mkiosdk.StreamingP
 		if found && !overwrite {
 			// Found something and we're not overwriting. We should skip it
 			skippedChan <- *sp.Name
-			// wg.Done()
+			wg.Done()
 			continue
 		}
 
@@ -66,7 +66,6 @@ func ImportStreamingPolicyWorker(ctx context.Context, client *mkiosdk.StreamingP
 			_, err := client.Delete(ctx, *sp.Name, nil)
 			if err != nil {
 				log.Errorf("unable to delete old StreamingPolicy %v for overwrite: %v", *sp.Name, err)
-				failedChan <- *sp.Name
 			}
 		}
 
