@@ -388,7 +388,7 @@ var rootCmd = &cobra.Command{
 			// Handling ConentKeyPolicies. This should happen before StreamingLocators
 			if contentKeyPolicies {
 				start := time.Now()
-				success, skipped, failureList, err := migrate.ImportContentKeyPolicies(ctx, mkImportContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite, fairplayAmsCompatibility)
+				success, skipped, failureList, err := migrate.ImportContentKeyPolicies(ctx, mkImportContentKeyPoliciesClient, contents.ContentKeyPolicies, overwrite, fairplayAmsCompatibility, workers)
 				if err != nil {
 					log.Errorf("error importing content key policies: %v", err)
 				}
@@ -398,7 +398,7 @@ var rootCmd = &cobra.Command{
 			// Handling Assets
 			if assets {
 				start := time.Now()
-				success, skipped, failureList, err := migrate.ImportAssets(ctx, mkImportAssetsClient, contents.Assets, overwrite)
+				success, skipped, failureList, err := migrate.ImportAssets(ctx, mkImportAssetsClient, contents.Assets, overwrite, workers)
 				if err != nil {
 					log.Errorf("error importing assets: %v", err)
 				}
@@ -408,7 +408,7 @@ var rootCmd = &cobra.Command{
 			// Handling Asset Filters. These require an asset, so import after assets
 			if assetFilters {
 				start := time.Now()
-				success, skipped, failureList, err := migrate.ImportAssetFilters(ctx, mkImportAssetFiltersClient, contents.AssetFilters, overwrite)
+				success, skipped, failureList, err := migrate.ImportAssetFilters(ctx, mkImportAssetFiltersClient, contents.AssetFilters, overwrite, workers)
 				if err != nil {
 					log.Errorf("error importing asset filters: %v", err)
 				}
@@ -418,7 +418,7 @@ var rootCmd = &cobra.Command{
 			// Handling StreamingPolicies
 			if streamingPolicies {
 				start := time.Now()
-				success, skipped, failureList, err := migrate.ImportStreamingPolicies(ctx, mkImportStreamingPoliciesClient, contents.StreamingPolicies, overwrite)
+				success, skipped, failureList, err := migrate.ImportStreamingPolicies(ctx, mkImportStreamingPoliciesClient, contents.StreamingPolicies, overwrite, workers)
 				if err != nil {
 					log.Errorf("error importing streaming policies: %v", err)
 				}
@@ -427,7 +427,7 @@ var rootCmd = &cobra.Command{
 			// Handling StreamingLocators
 			if streamingLocators {
 				start := time.Now()
-				success, skipped, failureList, err := migrate.ImportStreamingLocators(ctx, mkImportStreamingLocatorsClient, contents.StreamingLocators, overwrite)
+				success, skipped, failureList, err := migrate.ImportStreamingLocators(ctx, mkImportStreamingLocatorsClient, contents.StreamingLocators, overwrite, workers)
 				if err != nil {
 					log.Errorf("error importing streaming locators: %v", err)
 				}

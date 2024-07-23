@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"dev.azure.com/mediakind/mkio/ams-migration-tool.git/pkg/mkiosdk"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices"
@@ -36,17 +37,13 @@ func ExportMkStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPol
 	return sl, nil
 }
 
-// ImportStreamingPolicies reads a file containing StreamingPolicies in JSON format. Insert each asset into MKIO
-func ImportStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPoliciesClient, streamingPolicies []*armmediaservices.StreamingPolicy, overwrite bool) (int, int, []string, error) {
-	log.Info("Importing Streaming Policy")
-
-	// Some values to output at the end
-	successCount := 0
-	skipped := 0
-	failedSP := []string{}
+// ImportStreamingPolicyWorker reads a file containing StreamingPolicies in JSON format. Insert each streaming policy into MKIO
+func ImportStreamingPolicyWorker(ctx context.Context, client *mkiosdk.StreamingPoliciesClient, overwrite bool, wg *sync.WaitGroup, jobs chan *armmediaservices.StreamingPolicy, successChan chan string, skippedChan chan string, failedChan chan string) {
 
 	// Create each streamingPolicy
-	for _, sp := range streamingPolicies {
+	for sp := range jobs {
+		log.Debugf("Importing StreamingPolicy in MKIO: %v", *sp.Name)
+
 		found := true
 		// Check if StreamingPolicy already exists. We can't update them, so need to delete and recreate
 		_, err := client.Get(ctx, *sp.Name, nil)
@@ -59,7 +56,8 @@ func ImportStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPolic
 
 		if found && !overwrite {
 			// Found something and we're not overwriting. We should skip it
-			skipped++
+			skippedChan <- *sp.Name
+			// wg.Done()
 			continue
 		}
 
@@ -68,6 +66,7 @@ func ImportStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPolic
 			_, err := client.Delete(ctx, *sp.Name, nil)
 			if err != nil {
 				log.Errorf("unable to delete old StreamingPolicy %v for overwrite: %v", *sp.Name, err)
+				failedChan <- *sp.Name
 			}
 		}
 
@@ -76,11 +75,66 @@ func ImportStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPolic
 
 		_, err = client.CreateOrUpdate(ctx, *sp.Name, *sp, nil)
 		if err != nil {
-			failedSP = append(failedSP, *sp.Name)
-
+			failedChan <- *sp.Name
 			log.Errorf("unable to import streamingPolicy %v: %v", *sp.Name, err)
 		} else {
+			successChan <- *sp.Name
+		}
+		wg.Done()
+	}
+}
+
+// ImportStreamingPolicies reads a file containing StreamingPolicies in JSON format. Insert each streaming policy into MKIO
+func ImportStreamingPolicies(ctx context.Context, client *mkiosdk.StreamingPoliciesClient, streamingPolicies []*armmediaservices.StreamingPolicy, overwrite bool, workers int) (int, int, []string, error) {
+	log.Info("Importing Streaming Policy")
+
+	// Waitgroup to wait for all goroutines to finish
+	wg := new(sync.WaitGroup)
+
+	// Create channels to communicate between workers
+	successChan := make(chan string, len(streamingPolicies))
+	skippedChan := make(chan string, len(streamingPolicies))
+	failedChan := make(chan string, len(streamingPolicies))
+	jobs := make(chan *armmediaservices.StreamingPolicy, len(streamingPolicies))
+
+	// Setup worker pool. This will start X workers to handle jobs
+	for w := 1; w <= workers; w++ {
+		log.Infof("Starting StreamingPolicy worker %d", w)
+		go ImportStreamingPolicyWorker(ctx, client, overwrite, wg, jobs, successChan, skippedChan, failedChan)
+	}
+
+	// Create each streamingPolicy
+	for _, sp := range streamingPolicies {
+		wg.Add(1)
+		jobs <- sp
+	}
+
+	// Some values to output at the end
+	successCount := 0
+	skipped := 0
+	failedSP := []string{}
+
+	log.Info("Waiting for Streaming Policy workers to finish")
+	wg.Wait()
+	log.Info("Done importing Streaming Policies")
+
+	close(jobs)
+	close(successChan)
+	close(skippedChan)
+	close(failedChan)
+	for f := range successChan {
+		if f != "" {
 			successCount++
+		}
+	}
+	for result := range skippedChan {
+		if result != "" {
+			skipped++
+		}
+	}
+	for result := range failedChan {
+		if result != "" {
+			failedSP = append(failedSP, result)
 		}
 	}
 
