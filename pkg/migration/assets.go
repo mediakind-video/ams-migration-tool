@@ -3,6 +3,7 @@ package migrate
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"dev.azure.com/mediakind/mkio/ams-migration-tool.git/pkg/mkiosdk"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/mediaservices/armmediaservices"
@@ -35,15 +36,11 @@ func ExportMkAssets(ctx context.Context, client *mkiosdk.AssetsClient, before st
 	return assets, nil
 }
 
-// ImportAssets reads a file containing Assets in JSON format. Insert each asset into MKIO
-func ImportAssets(ctx context.Context, client *mkiosdk.AssetsClient, assets []*armmediaservices.Asset, overwrite bool) (int, int, []string, error) {
-	log.Info("Importing Assets")
+// ImportAssetsWorker - Do the work to import an asset into MKIO
+func ImportAssetsWorker(ctx context.Context, client *mkiosdk.AssetsClient, overwrite bool, wg *sync.WaitGroup, jobs chan *armmediaservices.Asset, successChan chan string, skippedChan chan string, failedChan chan string) {
 
-	failedAssets := []string{}
-	skipped := 0
-	successCount := 0
-	// Create each asset
-	for _, asset := range assets {
+	for asset := range jobs {
+		log.Debugf("Importing Asset in MKIO: %v", *asset.Name)
 
 		found := true
 		// Check if asset already exists. Skip update unless overwrite is set
@@ -54,18 +51,73 @@ func ImportAssets(ctx context.Context, client *mkiosdk.AssetsClient, assets []*a
 		if found && !overwrite {
 			// Found something and we're not overwriting. We should skip it
 			log.Debugf("Asset already exists in MKIO, skipping: %v", *asset.Name)
-			skipped++
-			continue
-		}
-
-		log.Debugf("Creating Asset in MKIO: %v", *asset.Name)
-
-		_, err = client.CreateOrUpdate(ctx, *asset.Name, asset, nil)
-		if err != nil {
-			failedAssets = append(failedAssets, *asset.Name)
-			log.Errorf("unable to import asset %v: %v", *asset.Name, err)
+			skippedChan <- *asset.Name
 		} else {
+
+			log.Debugf("Creating Asset in MKIO: %v", *asset.Name)
+
+			_, err = client.CreateOrUpdate(ctx, *asset.Name, asset, nil)
+			if err != nil {
+				log.Errorf("unable to import asset %v: %v", *asset.Name, err)
+				failedChan <- *asset.Name
+			} else {
+				successChan <- *asset.Name
+			}
+		}
+		wg.Done()
+	}
+}
+
+// ImportAssets reads a file containing Assets in JSON format. Insert each asset into MKIO
+func ImportAssets(ctx context.Context, client *mkiosdk.AssetsClient, assets []*armmediaservices.Asset, overwrite bool, workers int) (int, int, []string, error) {
+	log.Info("Importing Assets")
+
+	// Waitgroup to wait for all goroutines to finish
+	wg := new(sync.WaitGroup)
+
+	// Create channels to communicate between workers
+	successChan := make(chan string, len(assets))
+	skippedChan := make(chan string, len(assets))
+	failedChan := make(chan string, len(assets))
+	jobs := make(chan *armmediaservices.Asset, len(assets))
+
+	// Setup worker pool. This will start X workers to handle jobs
+	for w := 1; w <= workers; w++ {
+		log.Infof("Starting Asset worker %d", w)
+		go ImportAssetsWorker(ctx, client, overwrite, wg, jobs, successChan, skippedChan, failedChan)
+	}
+
+	failedAssets := []string{}
+	skipped := 0
+	successCount := 0
+
+	// Create each asset
+	for _, asset := range assets {
+		wg.Add(1)
+		jobs <- asset
+	}
+
+	log.Info("Waiting for Assets workers to finish")
+	wg.Wait()
+	log.Info("Done importing Assets")
+
+	close(jobs)
+	close(successChan)
+	close(skippedChan)
+	close(failedChan)
+	for f := range successChan {
+		if f != "" {
 			successCount++
+		}
+	}
+	for result := range skippedChan {
+		if result != "" {
+			skipped++
+		}
+	}
+	for result := range failedChan {
+		if result != "" {
+			failedAssets = append(failedAssets, result)
 		}
 	}
 

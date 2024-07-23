@@ -88,46 +88,99 @@ func ExportMkAssetFilters(ctx context.Context, client *mkiosdk.AssetFiltersClien
 	return allAssetFilters, nil
 }
 
-// ImportAssetFilters reads a file containing AssetFilters in JSON format. Insert each asset into MKIO
-func ImportAssetFilters(ctx context.Context, client *mkiosdk.AssetFiltersClient, assetFilters map[string][]*armmediaservices.AssetFilter, overwrite bool) (int, int, []string, error) {
+func ImportAssetFilterWorker(ctx context.Context, client *mkiosdk.AssetFiltersClient, overwrite bool, wg *sync.WaitGroup, jobs chan map[string][]*armmediaservices.AssetFilter, successChan chan string, skippedChan chan string, failedChan chan string) {
+
+	for job := range jobs {
+		for assetName, filters := range job {
+			log.Debugf("Importing AssetFilters for Asset: %v\n", assetName)
+			for _, assetFilter := range filters {
+				found := true
+				// Check if assetFilter already exists. Skip update unless overwrite is set
+				_, err := client.Get(ctx, *assetFilter.Name, nil)
+				if err != nil {
+					if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "Not Found") {
+						found = false
+					}
+				}
+				if found && !overwrite {
+					// Found something and we're not overwriting. We should skip it
+					log.Debugf("Skipping existing AssetFilter %v\n", *assetFilter.Name)
+					skippedChan <- *assetFilter.Name
+				} else {
+					_, err = client.CreateOrUpdate(ctx, assetName, *assetFilter.Name, assetFilter, nil)
+					if err != nil {
+						log.Errorf("unable to import asset filter %v: %v\n", *assetFilter.Name, err)
+						failedChan <- *assetFilter.Name
+					} else {
+						successChan <- *assetFilter.Name
+					}
+				}
+				wg.Done()
+			}
+		}
+	}
+}
+
+// ImportAssetFilters reads a file containing AssetFilters in JSON format. Insert each asset filter into MKIO
+func ImportAssetFilters(ctx context.Context, client *mkiosdk.AssetFiltersClient, assetFilters map[string][]*armmediaservices.AssetFilter, overwrite bool, workers int) (int, int, []string, error) {
 
 	log.Info("Importing AssetFilters")
+
+	// Waitgroup to wait for all goroutines to finish
+	wg := new(sync.WaitGroup)
+
+	// Get total number of filters
+	totalFilters := 0
+	for _, v := range assetFilters {
+		totalFilters += len(v)
+	}
+
+	// Create channels to communicate between workers
+	successChan := make(chan string, (totalFilters))
+	skippedChan := make(chan string, (totalFilters))
+	failedChan := make(chan string, (totalFilters))
+	jobs := make(chan map[string][]*armmediaservices.AssetFilter, (totalFilters))
+
+	// Setup worker pool. This will start X workers to handle jobs
+	for w := 1; w <= workers; w++ {
+		log.Infof("Starting AssetFilter worker %d", w)
+		go ImportAssetFilterWorker(ctx, client, overwrite, wg, jobs, successChan, skippedChan, failedChan)
+	}
 
 	failedAssetFilters := []string{}
 	skipped := 0
 	successCount := 0
-	// Create each asset
-	// Go through each key/value in map
+
+	// Create each asset filter
 	for assetName, assetFilterList := range assetFilters {
+		wg.Add(len(assetFilterList))
+		jobs <- map[string][]*armmediaservices.AssetFilter{assetName: assetFilterList}
+	}
 
-		// v is a []assetFilter, loop through it to handle each one
-		for _, af := range assetFilterList {
+	log.Info("Waiting for AssetFilter workers to finish")
+	wg.Wait()
+	log.Info("Done importing Asset Filters")
 
-			found := true
-			// Check if asset already exists. Skip update unless overwrite is set
-			_, err := client.Get(ctx, *af.Name, nil)
-			if err != nil {
-				if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "Not Found") {
-					found = false
-				}
-			}
-			if found && !overwrite {
-				// Found something and we're not overwriting. We should skip it
-				skipped++
-				continue
-			}
-
-			log.Debugf("Creating AssetFilter in MKIO: %v", *af.Name)
-
-			_, err = client.CreateOrUpdate(ctx, assetName, *af.Name, af, nil)
-			if err != nil {
-				failedAssetFilters = append(failedAssetFilters, *af.Name)
-				log.Errorf("unable to import asset filter %v: %v", *af.Name, err)
-			} else {
-				successCount++
-			}
+	close(jobs)
+	close(successChan)
+	close(skippedChan)
+	close(failedChan)
+	for f := range successChan {
+		if f != "" {
+			successCount++
 		}
 	}
+	for result := range skippedChan {
+		if result != "" {
+			skipped++
+		}
+	}
+	for result := range failedChan {
+		if result != "" {
+			failedAssetFilters = append(failedAssetFilters, result)
+		}
+	}
+
 	log.Infof("Skipped %d existing Asset Filters", skipped)
 	log.Infof("Imported %d Asset Filters", successCount)
 

@@ -96,18 +96,9 @@ func ExportMkStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLoc
 	return sl, nil
 }
 
-// ImportStreamingLocators reads a file containing StreamingLocators in JSON format. Insert each asset into MKIO
-func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocatorsClient, streamingLocators []*armmediaservices.StreamingLocator, overwrite bool) (int, int, []string, error) {
-
-	log.Info("Importing Streaming Locators")
-
-	// Some values to output at the end
-	successCount := 0
-	skipped := 0
-	failedSL := []string{}
-
-	// Create each streamingLocator
-	for _, sl := range streamingLocators {
+// ImportStreamingLocatorWorker - Do the work to import Streaming Locators into MKIO
+func ImportStreamingLocatorWorker(ctx context.Context, client *mkiosdk.StreamingLocatorsClient, overwrite bool, wg *sync.WaitGroup, jobs <-chan *armmediaservices.StreamingLocator, successChan chan<- string, skippedChan chan<- string, failedChan chan<- string) {
+	for sl := range jobs {
 		found := true
 		// Check if StreamingLocator already exists. We can't update them, so need to delete and recreate
 		_, err := client.Get(ctx, *sl.Name, nil)
@@ -120,7 +111,8 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 
 		if found && !overwrite {
 			// Found something and we're not overwriting. We should skip it
-			skipped++
+			skippedChan <- *sl.Name
+			wg.Done()
 			continue
 		}
 
@@ -129,6 +121,7 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 			_, err := client.Delete(ctx, *sl.Name, nil)
 			if err != nil {
 				log.Errorf("unable to delete old StreamingLocator %v for overwrite: %v", *sl.Name, err)
+				failedChan <- *sl.Name
 			}
 		}
 
@@ -142,11 +135,67 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 
 		_, err = client.CreateOrUpdate(ctx, *sl.Name, *sl, nil)
 		if err != nil {
-			failedSL = append(failedSL, *sl.Name)
+			failedChan <- *sl.Name
 
 			log.Errorf("unable to import streamingLocator %v: %v", *sl.Name, err)
 		} else {
+			successChan <- *sl.Name
+		}
+		wg.Done()
+	}
+}
+
+// ImportStreamingLocators reads a file containing StreamingLocators in JSON format. Insert each asset into MKIO
+func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocatorsClient, streamingLocators []*armmediaservices.StreamingLocator, overwrite bool, workers int) (int, int, []string, error) {
+
+	log.Info("Importing Streaming Locators")
+
+	// Waitgroup to wait for all goroutines to finish
+	wg := new(sync.WaitGroup)
+
+	// Create channels to communicate between workers
+	successChan := make(chan string, len(streamingLocators))
+	skippedChan := make(chan string, len(streamingLocators))
+	failedChan := make(chan string, len(streamingLocators))
+	jobs := make(chan *armmediaservices.StreamingLocator, len(streamingLocators))
+
+	// Setup worker pool. This will start X workers to handle jobs
+	for w := 1; w <= workers; w++ {
+		log.Infof("Starting Streaming Locator worker %d", w)
+		go ImportStreamingLocatorWorker(ctx, client, overwrite, wg, jobs, successChan, skippedChan, failedChan)
+	}
+
+	failedSL := []string{}
+	skipped := 0
+	successCount := 0
+
+	// Create each StreamingLocator
+	for _, sl := range streamingLocators {
+		wg.Add(1)
+		jobs <- sl
+	}
+
+	log.Info("Waiting for Streaming Locator workers to finish")
+	wg.Wait()
+	log.Info("Done importing Streaming Locators")
+
+	close(jobs)
+	close(successChan)
+	close(skippedChan)
+	close(failedChan)
+	for f := range successChan {
+		if f != "" {
 			successCount++
+		}
+	}
+	for result := range skippedChan {
+		if result != "" {
+			skipped++
+		}
+	}
+	for result := range failedChan {
+		if result != "" {
+			failedSL = append(failedSL, result)
 		}
 	}
 
