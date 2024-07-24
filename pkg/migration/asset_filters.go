@@ -105,12 +105,12 @@ func ImportAssetFilterWorker(ctx context.Context, client *mkiosdk.AssetFiltersCl
 				if found && !overwrite {
 					// Found something and we're not overwriting. We should skip it
 					log.Debugf("Skipping existing AssetFilter %v\n", *assetFilter.Name)
-					skippedChan <- *assetFilter.Name
+					skippedChan <- fmt.Sprintf("%v/%v", assetName, *assetFilter.Name)
 				} else {
 					_, err = client.CreateOrUpdate(ctx, assetName, *assetFilter.Name, assetFilter, nil)
 					if err != nil {
 						log.Errorf("unable to import asset filter %v: %v\n", *assetFilter.Name, err)
-						failedChan <- *assetFilter.Name
+						failedChan <- fmt.Sprintf("%v/%v", assetName, *assetFilter.Name)
 					} else {
 						successChan <- *assetFilter.Name
 					}
