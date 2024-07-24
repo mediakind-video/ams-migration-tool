@@ -156,8 +156,8 @@ func (client *AssetFiltersClient) deleteCreateRequest(ctx context.Context, asset
 // If the operation fails it returns an *ResponseError type.
 // assetFilterName - The Asset name.
 // options - AssetClientGetOptions contains the optional parameters for the AssetClient.Get method.
-func (client *AssetFiltersClient) Get(ctx context.Context, assetFilterName string, options *armmediaservices.AssetFiltersClientGetOptions) (armmediaservices.AssetFiltersClientGetResponse, error) {
-	req, err := client.getCreateRequest(ctx, assetFilterName, options)
+func (client *AssetFiltersClient) Get(ctx context.Context, assetName string, assetFilterName string, options *armmediaservices.AssetFiltersClientGetOptions) (armmediaservices.AssetFiltersClientGetResponse, error) {
+	req, err := client.getCreateRequest(ctx, assetName, assetFilterName, options)
 	if err != nil {
 		return armmediaservices.AssetFiltersClientGetResponse{}, err
 	}
@@ -173,13 +173,14 @@ func (client *AssetFiltersClient) Get(ctx context.Context, assetFilterName strin
 }
 
 // getCreateRequest creates the Get request.
-func (client *AssetFiltersClient) getCreateRequest(ctx context.Context, assetFilterName string, options *armmediaservices.AssetFiltersClientGetOptions) (*http.Request, error) {
-	urlPath := "/api/ams/{subscriptionName}/assetFilters/{assetFilterName}"
+func (client *AssetFiltersClient) getCreateRequest(ctx context.Context, assetName string, assetFilterName string, options *armmediaservices.AssetFiltersClientGetOptions) (*http.Request, error) {
+	urlPath := "/api/ams/{subscriptionName}/assets/{assetName}/assetFilters/{assetFilterName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
 	}
 	urlPath = strings.ReplaceAll(urlPath, "{subscriptionName}", url.PathEscape(client.subscriptionName))
 	urlPath = strings.ReplaceAll(urlPath, "{assetFilterName}", url.PathEscape(assetFilterName))
+	urlPath = strings.ReplaceAll(urlPath, "{assetName}", url.PathEscape(assetName))
 	path, err := url.JoinPath(client.host, urlPath)
 	if err != nil {
 		return nil, err

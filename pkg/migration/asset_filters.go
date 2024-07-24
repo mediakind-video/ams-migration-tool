@@ -96,7 +96,7 @@ func ImportAssetFilterWorker(ctx context.Context, client *mkiosdk.AssetFiltersCl
 			for _, assetFilter := range filters {
 				found := true
 				// Check if assetFilter already exists. Skip update unless overwrite is set
-				_, err := client.Get(ctx, *assetFilter.Name, nil)
+				_, err := client.Get(ctx, assetName, *assetFilter.Name, nil)
 				if err != nil {
 					if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "Not Found") {
 						found = false
