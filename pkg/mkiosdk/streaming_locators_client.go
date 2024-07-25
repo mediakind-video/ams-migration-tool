@@ -292,7 +292,7 @@ func (client *StreamingLocatorsClient) listCreateRequest(ctx context.Context, op
 
 	// Apply filters to query
 	filter := ""
-	if options.Filter != nil {
+	if options != nil && options.Filter != nil && *options.Filter != "" {
 		filter = `$filter=` + *options.Filter
 	}
 	q, err := url.ParseQuery(filter)

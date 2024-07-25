@@ -97,33 +97,27 @@ func ExportMkStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLoc
 }
 
 // ImportStreamingLocatorWorker - Do the work to import Streaming Locators into MKIO
-func ImportStreamingLocatorWorker(ctx context.Context, client *mkiosdk.StreamingLocatorsClient, overwrite bool, wg *sync.WaitGroup, jobs <-chan *armmediaservices.StreamingLocator, successChan chan<- string, skippedChan chan<- string, failedChan chan<- string) {
+func ImportStreamingLocatorWorker(ctx context.Context, client *mkiosdk.StreamingLocatorsClient, overwrite bool, wg *sync.WaitGroup, jobs <-chan *armmediaservices.StreamingLocator, successChan chan<- string, failedChan chan<- string) {
 	for sl := range jobs {
-		found := true
-		// Check if StreamingLocator already exists. We can't update them, so need to delete and recreate
-		_, err := client.Get(ctx, *sl.Name, nil)
-		if err != nil {
-			// We are looking for a not found error. If we get this we can add w/o incident
-			if strings.Contains(err.Error(), "not found") {
-				found = false
-			}
-		}
-
-		if found && !overwrite {
-			// Found something and we're not overwriting. We should skip it
-			log.Debugf("Skipping Existing StreamingLocator: %v", *sl.Name)
-			skippedChan <- *sl.Name
-			wg.Done()
-			continue
-		}
-
-		if found && overwrite {
-			// it exists, but we're overwriting, so we should delete it
-			log.Debugf("Deleting existing StreamingLocator: %v", *sl.Name)
-			_, err := client.Delete(ctx, *sl.Name, nil)
+		if overwrite {
+			found := true
+			// Check if StreamingLocator already exists. We can't update them, so need to delete and recreate
+			_, err := client.Get(ctx, *sl.Name, nil)
 			if err != nil {
-				log.Errorf("unable to delete old StreamingLocator %v for overwrite: %v", *sl.Name, err)
-				failedChan <- *sl.Name
+				// We are looking for a not found error. If we get this we can add w/o incident
+				if strings.Contains(err.Error(), "not found") {
+					found = false
+				}
+			}
+
+			if found {
+				// it exists, but we're overwriting, so we should delete it
+				log.Debugf("Deleting existing StreamingLocator: %v", *sl.Name)
+				_, err := client.Delete(ctx, *sl.Name, nil)
+				if err != nil {
+					log.Errorf("unable to delete old StreamingLocator %v for overwrite: %v", *sl.Name, err)
+					failedChan <- *sl.Name
+				}
 			}
 		}
 
@@ -135,7 +129,7 @@ func ImportStreamingLocatorWorker(ctx context.Context, client *mkiosdk.Streaming
 			sl.Properties.ContentKeys = nil
 		}
 
-		_, err = client.CreateOrUpdate(ctx, *sl.Name, *sl, nil)
+		_, err := client.CreateOrUpdate(ctx, *sl.Name, *sl, nil)
 		if err != nil {
 			failedChan <- *sl.Name
 
@@ -152,27 +146,56 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 
 	log.Info("Importing Streaming Locators")
 
-	// Waitgroup to wait for all goroutines to finish
-	wg := new(sync.WaitGroup)
-
-	// Create channels to communicate between workers
-	successChan := make(chan string, len(streamingLocators))
-	skippedChan := make(chan string, len(streamingLocators))
-	failedChan := make(chan string, len(streamingLocators))
-	jobs := make(chan *armmediaservices.StreamingLocator, len(streamingLocators))
-
-	// Setup worker pool. This will start X workers to handle jobs
-	for w := 1; w <= workers; w++ {
-		log.Infof("Starting Streaming Locator worker %d", w)
-		go ImportStreamingLocatorWorker(ctx, client, overwrite, wg, jobs, successChan, skippedChan, failedChan)
-	}
-
 	failedSL := []string{}
 	skipped := 0
 	successCount := 0
 
+	var newStreamingLocators []*armmediaservices.StreamingLocator
+
+	if !overwrite {
+		// List Existing StreamingLocators
+		slList, err := client.List(ctx, nil)
+		if err != nil {
+			return successCount, skipped, failedSL, fmt.Errorf("unable to list existing StreamingLocators: %v", err)
+		}
+
+		// Remove StreamingLocators from the list if already exist in MKIO
+		// Make sure to record the skipped ones. Debug log & increase count
+		for _, sl := range streamingLocators {
+			found := false
+			for _, existingSL := range slList.Value {
+				if *sl.Name == *existingSL.Name {
+					log.Debugf("Skipping existing StreamingLocator: %v", *sl.Name)
+					skipped++
+					found = true
+				}
+			}
+			if !found {
+				newStreamingLocators = append(newStreamingLocators, sl)
+			}
+		}
+	} else {
+		newStreamingLocators = streamingLocators
+	}
+
+	// return successCount, skipped, failedSL, nil
+
+	// Waitgroup to wait for all goroutines to finish
+	wg := new(sync.WaitGroup)
+
+	// Create channels to communicate between workers
+	successChan := make(chan string, len(newStreamingLocators))
+	failedChan := make(chan string, len(newStreamingLocators))
+	jobs := make(chan *armmediaservices.StreamingLocator, len(newStreamingLocators))
+
+	// Setup worker pool. This will start X workers to handle jobs
+	for w := 1; w <= workers; w++ {
+		log.Infof("Starting Streaming Locator worker %d", w)
+		go ImportStreamingLocatorWorker(ctx, client, overwrite, wg, jobs, successChan, failedChan)
+	}
+
 	// Create each StreamingLocator
-	for _, sl := range streamingLocators {
+	for _, sl := range newStreamingLocators {
 		wg.Add(1)
 		jobs <- sl
 	}
@@ -183,16 +206,10 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 
 	close(jobs)
 	close(successChan)
-	close(skippedChan)
 	close(failedChan)
 	for f := range successChan {
 		if f != "" {
 			successCount++
-		}
-	}
-	for result := range skippedChan {
-		if result != "" {
-			skipped++
 		}
 	}
 	for result := range failedChan {
