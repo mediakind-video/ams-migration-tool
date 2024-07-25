@@ -111,6 +111,7 @@ func ImportStreamingLocatorWorker(ctx context.Context, client *mkiosdk.Streaming
 
 		if found && !overwrite {
 			// Found something and we're not overwriting. We should skip it
+			log.Debugf("Skipping Existing StreamingLocator: %v", *sl.Name)
 			skippedChan <- *sl.Name
 			wg.Done()
 			continue
@@ -118,6 +119,7 @@ func ImportStreamingLocatorWorker(ctx context.Context, client *mkiosdk.Streaming
 
 		if found && overwrite {
 			// it exists, but we're overwriting, so we should delete it
+			log.Debugf("Deleting existing StreamingLocator: %v", *sl.Name)
 			_, err := client.Delete(ctx, *sl.Name, nil)
 			if err != nil {
 				log.Errorf("unable to delete old StreamingLocator %v for overwrite: %v", *sl.Name, err)
