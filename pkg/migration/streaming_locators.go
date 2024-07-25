@@ -153,6 +153,7 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 	var newStreamingLocators []*armmediaservices.StreamingLocator
 
 	if !overwrite {
+		log.Debug("Checking for existing StreamingLocators in MKIO")
 		// List Existing StreamingLocators
 		slList, err := client.List(ctx, nil)
 		if err != nil {
@@ -168,6 +169,7 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 					log.Debugf("Skipping existing StreamingLocator: %v", *sl.Name)
 					skipped++
 					found = true
+					break
 				}
 			}
 			if !found {
@@ -175,10 +177,11 @@ func ImportStreamingLocators(ctx context.Context, client *mkiosdk.StreamingLocat
 			}
 		}
 	} else {
+		log.Debug("Overwriting existing StreamingLocators in MKIO")
 		newStreamingLocators = streamingLocators
 	}
 
-	// return successCount, skipped, failedSL, nil
+	return successCount, skipped, failedSL, nil
 
 	// Waitgroup to wait for all goroutines to finish
 	wg := new(sync.WaitGroup)
