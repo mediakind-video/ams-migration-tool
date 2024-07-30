@@ -71,7 +71,7 @@ func (client *StreamingEndpointsClient) CreateOrUpdate(ctx context.Context, stre
 }
 
 // createOrUpdateCreateRequest creates the CreateOrUpdate request.
-func (client *StreamingEndpointsClient) createOrUpdateCreateRequest(ctx context.Context, streamingEndpointName string, parameters armmediaservices.StreamingEndpoint, options *armmediaservices.StreamingEndpointsClientBeginCreateOptions) (*http.Request, error) {
+func (client *StreamingEndpointsClient) createOrUpdateCreateRequest(ctx context.Context, streamingEndpointName string, parameters armmediaservices.StreamingEndpoint, options *armmediaservices.StreamingEndpointsClientBeginCreateOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingEndpoints/{streamingEndpointName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -86,13 +86,19 @@ func (client *StreamingEndpointsClient) createOrUpdateCreateRequest(ctx context.
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPut, path, bytes.NewReader(body))
+
+	b := bytes.NewReader(body)
+	var rcBody io.ReadCloser
+	if body != nil {
+		rcBody = io.NopCloser(io.ReadSeeker(b))
+	}
+	req, err := http.NewRequest(http.MethodPut, path, rcBody)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{b, req}, nil
 }
 
 // createOrUpdateHandleResponse handles the CreateOrUpdate response.
@@ -128,7 +134,7 @@ func (client *StreamingEndpointsClient) Get(ctx context.Context, streamingEndpoi
 }
 
 // getCreateRequest creates the Get request.
-func (client *StreamingEndpointsClient) getCreateRequest(ctx context.Context, streamingEndpointName string, options *armmediaservices.StreamingEndpointsClientGetOptions) (*http.Request, error) {
+func (client *StreamingEndpointsClient) getCreateRequest(ctx context.Context, streamingEndpointName string, options *armmediaservices.StreamingEndpointsClientGetOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingEndpoints/{streamingEndpointName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -145,7 +151,7 @@ func (client *StreamingEndpointsClient) getCreateRequest(ctx context.Context, st
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // getHandleResponse handles the Get response.
@@ -180,7 +186,7 @@ func (client *StreamingEndpointsClient) List(ctx context.Context, options *armme
 }
 
 // listCreateRequest creates the List request.
-func (client *StreamingEndpointsClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingEndpointsClientListOptions) (*http.Request, error) {
+func (client *StreamingEndpointsClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingEndpointsClientListOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingEndpoints"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionID cannot be empty")
@@ -196,7 +202,7 @@ func (client *StreamingEndpointsClient) listCreateRequest(ctx context.Context, o
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // listHandleResponse handles the List response.
@@ -235,7 +241,7 @@ func (client *StreamingEndpointsClient) Delete(ctx context.Context, streamingEnd
 }
 
 // deleteCreateRequest creates the Delete request.
-func (client *StreamingEndpointsClient) deleteCreateRequest(ctx context.Context, streamingEndpointName string, options *armmediaservices.StreamingEndpointsClientBeginDeleteOptions) (*http.Request, error) {
+func (client *StreamingEndpointsClient) deleteCreateRequest(ctx context.Context, streamingEndpointName string, options *armmediaservices.StreamingEndpointsClientBeginDeleteOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingEndpoints/{streamingEndpointName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -253,7 +259,7 @@ func (client *StreamingEndpointsClient) deleteCreateRequest(ctx context.Context,
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
 
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // lookupStreamingEndpoints Get streaming endpoints from mk.io. Remove pagination

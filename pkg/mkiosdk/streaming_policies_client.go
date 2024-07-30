@@ -70,7 +70,7 @@ func (client *StreamingPoliciesClient) CreateOrUpdate(ctx context.Context, strea
 }
 
 // createOrUpdateCreateRequest creates the CreateOrUpdate request.
-func (client *StreamingPoliciesClient) createOrUpdateCreateRequest(ctx context.Context, streamingPolicyName string, parameters armmediaservices.StreamingPolicy, options *armmediaservices.StreamingPoliciesClientCreateOptions) (*http.Request, error) {
+func (client *StreamingPoliciesClient) createOrUpdateCreateRequest(ctx context.Context, streamingPolicyName string, parameters armmediaservices.StreamingPolicy, options *armmediaservices.StreamingPoliciesClientCreateOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingPolicies/{streamingPolicyName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -85,13 +85,20 @@ func (client *StreamingPoliciesClient) createOrUpdateCreateRequest(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPut, path, bytes.NewReader(body))
+
+	b := bytes.NewReader(body)
+	var rcBody io.ReadCloser
+	if body != nil {
+		rcBody = io.NopCloser(io.ReadSeeker(b))
+	}
+
+	req, err := http.NewRequest(http.MethodPut, path, rcBody)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{b, req}, nil
 }
 
 // createOrUpdateHandleResponse handles the CreateOrUpdate response.
@@ -128,7 +135,7 @@ func (client *StreamingPoliciesClient) Delete(ctx context.Context, streamingPoli
 }
 
 // deleteCreateRequest creates the Delete request.
-func (client *StreamingPoliciesClient) deleteCreateRequest(ctx context.Context, streamingPolicyName string, options *armmediaservices.StreamingPoliciesClientDeleteOptions) (*http.Request, error) {
+func (client *StreamingPoliciesClient) deleteCreateRequest(ctx context.Context, streamingPolicyName string, options *armmediaservices.StreamingPoliciesClientDeleteOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingPolicies/{streamingPolicyName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -146,7 +153,7 @@ func (client *StreamingPoliciesClient) deleteCreateRequest(ctx context.Context, 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
 
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // Get - Get the details of a Streaming Policy in the Media Services account
@@ -168,7 +175,7 @@ func (client *StreamingPoliciesClient) Get(ctx context.Context, streamingPolicyN
 }
 
 // getCreateRequest creates the Get request.
-func (client *StreamingPoliciesClient) getCreateRequest(ctx context.Context, streamingPolicyName string, options *armmediaservices.StreamingPoliciesClientGetOptions) (*http.Request, error) {
+func (client *StreamingPoliciesClient) getCreateRequest(ctx context.Context, streamingPolicyName string, options *armmediaservices.StreamingPoliciesClientGetOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingPolicies/{streamingPolicyName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -185,7 +192,7 @@ func (client *StreamingPoliciesClient) getCreateRequest(ctx context.Context, str
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // getHandleResponse handles the Get response.
@@ -220,7 +227,7 @@ func (client *StreamingPoliciesClient) List(ctx context.Context, options *armmed
 }
 
 // listCreateRequest creates the List request.
-func (client *StreamingPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingPoliciesClientListOptions) (*http.Request, error) {
+func (client *StreamingPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingPoliciesClientListOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingPolicies"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -247,7 +254,7 @@ func (client *StreamingPoliciesClient) listCreateRequest(ctx context.Context, op
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // listHandleResponse handles the List response.

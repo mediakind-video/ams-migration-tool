@@ -70,7 +70,7 @@ func (client *AssetsClient) CreateOrUpdate(ctx context.Context, assetName string
 }
 
 // createOrUpdateCreateRequest creates the CreateOrUpdate request.
-func (client *AssetsClient) createOrUpdateCreateRequest(ctx context.Context, assetName string, parameters *armmediaservices.Asset, options *armmediaservices.AssetsClientCreateOrUpdateOptions) (*http.Request, error) {
+func (client *AssetsClient) createOrUpdateCreateRequest(ctx context.Context, assetName string, parameters *armmediaservices.Asset, options *armmediaservices.AssetsClientCreateOrUpdateOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/assets/{assetName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -85,13 +85,20 @@ func (client *AssetsClient) createOrUpdateCreateRequest(ctx context.Context, ass
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPut, path, bytes.NewReader(body))
+
+	b := bytes.NewReader(body)
+	var rcBody io.ReadCloser
+	if body != nil {
+		rcBody = io.NopCloser(io.ReadSeeker(b))
+	}
+
+	req, err := http.NewRequest(http.MethodPut, path, rcBody)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{b, req}, nil
 }
 
 // createOrUpdateHandleResponse handles the CreateOrUpdate response.
@@ -128,7 +135,7 @@ func (client *AssetsClient) Delete(ctx context.Context, assetName string, option
 }
 
 // deleteCreateRequest creates the Delete request.
-func (client *AssetsClient) deleteCreateRequest(ctx context.Context, assetName string, options *armmediaservices.AssetsClientDeleteOptions) (*http.Request, error) {
+func (client *AssetsClient) deleteCreateRequest(ctx context.Context, assetName string, options *armmediaservices.AssetsClientDeleteOptions) (*Request, error) {
 
 	urlPath := "/api/ams/{subscriptionName}/assets/{assetName}"
 	if client.subscriptionName == "" {
@@ -147,7 +154,7 @@ func (client *AssetsClient) deleteCreateRequest(ctx context.Context, assetName s
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
 
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // Get - Get the details of a Asset in the Media Services account
@@ -170,7 +177,7 @@ func (client *AssetsClient) Get(ctx context.Context, assetName string, options *
 }
 
 // getCreateRequest creates the Get request.
-func (client *AssetsClient) getCreateRequest(ctx context.Context, assetName string, options *armmediaservices.AssetsClientGetOptions) (*http.Request, error) {
+func (client *AssetsClient) getCreateRequest(ctx context.Context, assetName string, options *armmediaservices.AssetsClientGetOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/assets/{assetName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -187,7 +194,7 @@ func (client *AssetsClient) getCreateRequest(ctx context.Context, assetName stri
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // getHandleResponse handles the Get response.
@@ -223,7 +230,7 @@ func (client *AssetsClient) List(ctx context.Context, options *armmediaservices.
 }
 
 // listCreateRequest creates the list request.
-func (client *AssetsClient) listCreateRequest(ctx context.Context, options *armmediaservices.AssetsClientListOptions) (*http.Request, error) {
+func (client *AssetsClient) listCreateRequest(ctx context.Context, options *armmediaservices.AssetsClientListOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/assets"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -250,7 +257,7 @@ func (client *AssetsClient) listCreateRequest(ctx context.Context, options *armm
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // listHandleResponse handles the List response.

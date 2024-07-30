@@ -70,7 +70,7 @@ func (client *AssetFiltersClient) CreateOrUpdate(ctx context.Context, assetName 
 }
 
 // createOrUpdateCreateRequest creates the CreateOrUpdate request.
-func (client *AssetFiltersClient) createOrUpdateCreateRequest(ctx context.Context, assetName string, assetFilterName string, parameters *armmediaservices.AssetFilter, options *armmediaservices.AssetFiltersClientCreateOrUpdateOptions) (*http.Request, error) {
+func (client *AssetFiltersClient) createOrUpdateCreateRequest(ctx context.Context, assetName string, assetFilterName string, parameters *armmediaservices.AssetFilter, options *armmediaservices.AssetFiltersClientCreateOrUpdateOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/assets/{assetName}/filters/{assetFilterName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -86,13 +86,19 @@ func (client *AssetFiltersClient) createOrUpdateCreateRequest(ctx context.Contex
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPut, path, bytes.NewReader(body))
+
+	b := bytes.NewReader(body)
+	var rcBody io.ReadCloser
+	if body != nil {
+		rcBody = io.NopCloser(io.ReadSeeker(b))
+	}
+	req, err := http.NewRequest(http.MethodPut, path, rcBody)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{b, req}, nil
 }
 
 // createOrUpdateHandleResponse handles the CreateOrUpdate response.
@@ -130,7 +136,7 @@ func (client *AssetFiltersClient) Delete(ctx context.Context, assetFilterName st
 }
 
 // deleteCreateRequest creates the Delete request.
-func (client *AssetFiltersClient) deleteCreateRequest(ctx context.Context, assetFilterName string, options *armmediaservices.AssetFiltersClientDeleteOptions) (*http.Request, error) {
+func (client *AssetFiltersClient) deleteCreateRequest(ctx context.Context, assetFilterName string, options *armmediaservices.AssetFiltersClientDeleteOptions) (*Request, error) {
 
 	urlPath := "/api/ams/{subscriptionName}/assetFilters/{assetFilterName}"
 	if client.subscriptionName == "" {
@@ -149,7 +155,7 @@ func (client *AssetFiltersClient) deleteCreateRequest(ctx context.Context, asset
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
 
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // Get - Get the details of a Asset in the Media Services account
@@ -173,7 +179,7 @@ func (client *AssetFiltersClient) Get(ctx context.Context, assetName string, ass
 }
 
 // getCreateRequest creates the Get request.
-func (client *AssetFiltersClient) getCreateRequest(ctx context.Context, assetName string, assetFilterName string, options *armmediaservices.AssetFiltersClientGetOptions) (*http.Request, error) {
+func (client *AssetFiltersClient) getCreateRequest(ctx context.Context, assetName string, assetFilterName string, options *armmediaservices.AssetFiltersClientGetOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/assets/{assetName}/assetFilters/{assetFilterName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -185,13 +191,14 @@ func (client *AssetFiltersClient) getCreateRequest(ctx context.Context, assetNam
 	if err != nil {
 		return nil, err
 	}
+
 	req, err := http.NewRequest(http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // getHandleResponse handles the Get response.
@@ -239,7 +246,7 @@ func (client *AssetFiltersClient) List(ctx context.Context, assetName string, op
 }
 
 // listCreateRequest creates the list request.
-func (client *AssetFiltersClient) listCreateRequest(ctx context.Context, assetName string, options *armmediaservices.AssetFiltersClientListOptions) (*http.Request, error) {
+func (client *AssetFiltersClient) listCreateRequest(ctx context.Context, assetName string, options *armmediaservices.AssetFiltersClientListOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/assets/{assetName}/assetFilters"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -256,7 +263,7 @@ func (client *AssetFiltersClient) listCreateRequest(ctx context.Context, assetNa
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // listHandleResponse handles the list response.

@@ -3,6 +3,7 @@ package mkiosdk
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -15,6 +16,12 @@ type MkioClient struct {
 	subscriptionName string
 	token            string
 	hc               *http.Client
+}
+
+type Request struct {
+	body io.ReadSeeker
+
+	*http.Request
 }
 
 func generateFilter(before string, after string) string {
@@ -84,14 +91,81 @@ func (client *MkioClient) getProfileRequest(ctx context.Context) (*http.Request,
 	return req, nil
 }
 
-func (client *MkioClient) DoRequestWithBackoff(request *http.Request) (*http.Response, error) {
-	var resp *http.Response
+// func (client *MkioClient) DoRequestWithBackoff(request *http.Request) (*http.Response, error) {
+// 	var resp *http.Response
+// 	fmt.Println("--------------")
+// 	fmt.Println("Starting ", request.Method)
+// 	originalRequst := *request
+// 	fmt.Printf("Original Request: %v\n", request.Body)
+// 	// loop through backoff schedule. Hopefully we don't actually have to loop, but this will trigger if we get rate limited
+// 	for _, backoff := range backoffSchedule {
+// 		currentRequest := originalRequst
+// 		fmt.Printf("Current request: %v\n", currentRequest.Body)
+// 		var err error
+// 		resp, err = client.hc.Do(&currentRequest)
+// 		if err != nil {
+// 			// Return an error from the Request
+// 			return resp, err
+// 		}
 
+// 		// Check the status code, expectations of response are consistent across functions
+// 		if request.Method == http.MethodPut {
+// 			// CreateOrUpdate
+// 			fmt.Println("Ended PUT")
+// 			if HasStatusCode(resp, http.StatusOK, http.StatusCreated) {
+// 				fmt.Println("GOOD")
+// 				return resp, nil
+// 			}
+// 		} else if request.Method == http.MethodPost {
+// 			// List Paths
+// 			fmt.Println("Ended POST")
+// 			if HasStatusCode(resp, http.StatusOK) {
+// 				fmt.Println("GOOD")
+// 				return resp, nil
+// 			}
+// 		} else if request.Method == http.MethodDelete {
+// 			// Delete
+// 			fmt.Println("Ended DELETE")
+// 			if HasStatusCode(resp, http.StatusOK, http.StatusNoContent) {
+// 				fmt.Println("GOOD")
+// 				return resp, nil
+// 			}
+// 		} else if request.Method == http.MethodGet {
+// 			// Get/List
+// 			fmt.Println("Ended GET")
+// 			if HasStatusCode(resp, http.StatusOK) {
+// 				fmt.Println("GOOD")
+// 				return resp, nil
+// 			}
+// 		}
+
+// 		// Unhandled status Codes. The only one we care about retrying for is TooManyRequests. Return an error from the status code
+// 		if !HasStatusCode(resp, http.StatusTooManyRequests) {
+// 			fmt.Println("UNEXPECTED STATUS")
+// 			return resp, NewResponseError(resp)
+// 		}
+
+// 		fmt.Println("DO BACKOFFF")
+
+// 		// We have a TooManyRequests status code. Sleep for the backoff duration and try again
+// 		time.Sleep(backoff)
+// 	}
+
+// 	// We have exhausted the backoff schedule. Return the last response & corresponding Error
+// 	return resp, NewResponseError(resp)
+// }
+
+func (client *MkioClient) DoRequestWithBackoff(request *Request) (*http.Response, error) {
+	var resp *http.Response
 	// loop through backoff schedule. Hopefully we don't actually have to loop, but this will trigger if we get rate limited
 	for _, backoff := range backoffSchedule {
 		var err error
+		// Rewind the body to apply again
+		if request.body != nil {
+			request.body.Seek(0, 0)
+		}
 
-		resp, err = client.hc.Do(request)
+		resp, err = client.hc.Do(request.Request)
 		if err != nil {
 			// Return an error from the Request
 			return resp, err
