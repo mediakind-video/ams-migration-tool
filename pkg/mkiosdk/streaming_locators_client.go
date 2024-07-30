@@ -70,7 +70,7 @@ func (client *StreamingLocatorsClient) CreateOrUpdate(ctx context.Context, strea
 }
 
 // createOrUpdateCreateRequest creates the CreateOrUpdate request.
-func (client *StreamingLocatorsClient) createOrUpdateCreateRequest(ctx context.Context, streamingLocatorName string, parameters armmediaservices.StreamingLocator, options *armmediaservices.StreamingLocatorsClientCreateOptions) (*http.Request, error) {
+func (client *StreamingLocatorsClient) createOrUpdateCreateRequest(ctx context.Context, streamingLocatorName string, parameters armmediaservices.StreamingLocator, options *armmediaservices.StreamingLocatorsClientCreateOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingLocators/{streamingLocatorName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -85,13 +85,20 @@ func (client *StreamingLocatorsClient) createOrUpdateCreateRequest(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPut, path, bytes.NewReader(body))
+
+	b := bytes.NewReader(body)
+	var rcBody io.ReadCloser
+	if body != nil {
+		rcBody = io.NopCloser(io.ReadSeeker(b))
+	}
+
+	req, err := http.NewRequest(http.MethodPut, path, rcBody)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{b, req}, nil
 }
 
 // createOrUpdateHandleResponse handles the CreateOrUpdate response.
@@ -128,7 +135,7 @@ func (client *StreamingLocatorsClient) Delete(ctx context.Context, streamingLoca
 }
 
 // deleteCreateRequest creates the Delete request.
-func (client *StreamingLocatorsClient) deleteCreateRequest(ctx context.Context, streamingLocatorName string, options *armmediaservices.StreamingLocatorsClientDeleteOptions) (*http.Request, error) {
+func (client *StreamingLocatorsClient) deleteCreateRequest(ctx context.Context, streamingLocatorName string, options *armmediaservices.StreamingLocatorsClientDeleteOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingLocators/{streamingLocatorName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -139,6 +146,7 @@ func (client *StreamingLocatorsClient) deleteCreateRequest(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
+
 	req, err := http.NewRequest(http.MethodDelete, path, nil)
 	if err != nil {
 		return nil, err
@@ -146,7 +154,7 @@ func (client *StreamingLocatorsClient) deleteCreateRequest(ctx context.Context, 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
 
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // Get - Get the details of a Streaming Locator in the Media Services account
@@ -168,7 +176,7 @@ func (client *StreamingLocatorsClient) Get(ctx context.Context, streamingLocator
 }
 
 // getCreateRequest creates the Get request.
-func (client *StreamingLocatorsClient) getCreateRequest(ctx context.Context, streamingLocatorName string, options *armmediaservices.StreamingLocatorsClientGetOptions) (*http.Request, error) {
+func (client *StreamingLocatorsClient) getCreateRequest(ctx context.Context, streamingLocatorName string, options *armmediaservices.StreamingLocatorsClientGetOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingLocators/{streamingLocatorName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -185,7 +193,7 @@ func (client *StreamingLocatorsClient) getCreateRequest(ctx context.Context, str
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // getHandleResponse handles the Get response.
@@ -223,7 +231,7 @@ func (client *StreamingLocatorsClient) ListPaths(ctx context.Context, streamingL
 }
 
 // listPathsCreateRequest creates the ListPaths request.
-func (client *StreamingLocatorsClient) listPathsCreateRequest(ctx context.Context, streamingLocatorName string, options *armmediaservices.StreamingLocatorsClientListPathsOptions) (*http.Request, error) {
+func (client *StreamingLocatorsClient) listPathsCreateRequest(ctx context.Context, streamingLocatorName string, options *armmediaservices.StreamingLocatorsClientListPathsOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingLocators/{streamingLocatorName}/listPaths"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -241,7 +249,7 @@ func (client *StreamingLocatorsClient) listPathsCreateRequest(ctx context.Contex
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
 
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // listPathsHandleResponse handles the ListPaths response.
@@ -279,7 +287,7 @@ func (client *StreamingLocatorsClient) List(ctx context.Context, options *armmed
 }
 
 // listCreateRequest creates the ListPaths request.
-func (client *StreamingLocatorsClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingLocatorsClientListOptions) (*http.Request, error) {
+func (client *StreamingLocatorsClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingLocatorsClientListOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingLocators"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -307,7 +315,7 @@ func (client *StreamingLocatorsClient) listCreateRequest(ctx context.Context, op
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
 
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // listHandleResponse handles the List response.

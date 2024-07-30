@@ -71,7 +71,7 @@ func (client *ContentKeyPoliciesClient) CreateOrUpdate(ctx context.Context, cont
 }
 
 // createOrUpdateCreateRequest creates the CreateOrUpdate request.
-func (client *ContentKeyPoliciesClient) createOrUpdateCreateRequest(ctx context.Context, contentKeyPolicyName string, parameters *FPContentKeyPolicy, options *armmediaservices.ContentKeyPoliciesClientCreateOrUpdateOptions) (*http.Request, error) {
+func (client *ContentKeyPoliciesClient) createOrUpdateCreateRequest(ctx context.Context, contentKeyPolicyName string, parameters *FPContentKeyPolicy, options *armmediaservices.ContentKeyPoliciesClientCreateOrUpdateOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/contentKeyPolicies/{contentKeyPolicyName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -86,13 +86,19 @@ func (client *ContentKeyPoliciesClient) createOrUpdateCreateRequest(ctx context.
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPut, path, bytes.NewReader(body))
+
+	b := bytes.NewReader(body)
+	var rcBody io.ReadCloser
+	if body != nil {
+		rcBody = io.NopCloser(io.ReadSeeker(b))
+	}
+	req, err := http.NewRequest(http.MethodPut, path, rcBody)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{b, req}, nil
 }
 
 // createOrUpdateHandleResponse handles the CreateOrUpdate response.
@@ -128,7 +134,7 @@ func (client *ContentKeyPoliciesClient) Delete(ctx context.Context, contentKeyPo
 }
 
 // deleteCreateRequest creates the Delete request.
-func (client *ContentKeyPoliciesClient) deleteCreateRequest(ctx context.Context, contentKeyPolicyName string, options *armmediaservices.ContentKeyPoliciesClientDeleteOptions) (*http.Request, error) {
+func (client *ContentKeyPoliciesClient) deleteCreateRequest(ctx context.Context, contentKeyPolicyName string, options *armmediaservices.ContentKeyPoliciesClientDeleteOptions) (*Request, error) {
 
 	urlPath := "/api/ams/{subscriptionName}/contentKeyPolicies/{contentKeyPolicyName}"
 	if client.subscriptionName == "" {
@@ -147,7 +153,7 @@ func (client *ContentKeyPoliciesClient) deleteCreateRequest(ctx context.Context,
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
 
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // Get - Get the details of a ContentKeyPolicy in the Media Services account
@@ -170,7 +176,7 @@ func (client *ContentKeyPoliciesClient) Get(ctx context.Context, contentKeyPolic
 }
 
 // getCreateRequest creates the Get request.
-func (client *ContentKeyPoliciesClient) getCreateRequest(ctx context.Context, contentKeyPolicyName string, options *armmediaservices.ContentKeyPoliciesClientGetOptions) (*http.Request, error) {
+func (client *ContentKeyPoliciesClient) getCreateRequest(ctx context.Context, contentKeyPolicyName string, options *armmediaservices.ContentKeyPoliciesClientGetOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/contentKeyPolicies/{contentKeyPolicyName}"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -187,7 +193,7 @@ func (client *ContentKeyPoliciesClient) getCreateRequest(ctx context.Context, co
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // getHandleResponse handles the Get response.
@@ -224,7 +230,7 @@ func (client *ContentKeyPoliciesClient) GetPolicyPropertiesWithSecrets(ctx conte
 }
 
 // getCreateRequest creates the Get request.
-func (client *ContentKeyPoliciesClient) getWithSecretsCreateRequest(ctx context.Context, contentKeyPolicyName string, options *armmediaservices.ContentKeyPoliciesClientGetOptions) (*http.Request, error) {
+func (client *ContentKeyPoliciesClient) getWithSecretsCreateRequest(ctx context.Context, contentKeyPolicyName string, options *armmediaservices.ContentKeyPoliciesClientGetOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/contentKeyPolicies/{contentKeyPolicyName}/getPolicyPropertiesWithSecrets"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -241,7 +247,7 @@ func (client *ContentKeyPoliciesClient) getWithSecretsCreateRequest(ctx context.
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // getHandleResponse handles the Get response.
@@ -277,7 +283,7 @@ func (client *ContentKeyPoliciesClient) List(ctx context.Context, options *armme
 }
 
 // listCreateRequest creates the Get request.
-func (client *ContentKeyPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.ContentKeyPoliciesClientListOptions) (*http.Request, error) {
+func (client *ContentKeyPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.ContentKeyPoliciesClientListOptions) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/contentKeyPolicies"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -304,7 +310,7 @@ func (client *ContentKeyPoliciesClient) listCreateRequest(ctx context.Context, o
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("x-mkio-token", client.token)
-	return req, nil
+	return &Request{nil, req}, nil
 }
 
 // listHandleResponse handles the list response.

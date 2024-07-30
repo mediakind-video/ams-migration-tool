@@ -3,6 +3,7 @@ package mkiosdk
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -15,6 +16,12 @@ type MkioClient struct {
 	subscriptionName string
 	token            string
 	hc               *http.Client
+}
+
+type Request struct {
+	body io.ReadSeeker
+
+	*http.Request
 }
 
 func generateFilter(before string, after string) string {
@@ -84,14 +91,17 @@ func (client *MkioClient) getProfileRequest(ctx context.Context) (*http.Request,
 	return req, nil
 }
 
-func (client *MkioClient) DoRequestWithBackoff(request *http.Request) (*http.Response, error) {
+func (client *MkioClient) DoRequestWithBackoff(request *Request) (*http.Response, error) {
 	var resp *http.Response
-
 	// loop through backoff schedule. Hopefully we don't actually have to loop, but this will trigger if we get rate limited
 	for _, backoff := range backoffSchedule {
 		var err error
+		// Rewind the body to apply again
+		if request.body != nil {
+			request.body.Seek(0, 0)
+		}
 
-		resp, err = client.hc.Do(request)
+		resp, err = client.hc.Do(request.Request)
 		if err != nil {
 			// Return an error from the Request
 			return resp, err
