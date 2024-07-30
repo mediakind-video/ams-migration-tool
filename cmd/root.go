@@ -270,19 +270,19 @@ var rootCmd = &cobra.Command{
 				if err != nil {
 					log.Fatalf("error creating mk.io Asset Filters Client: %v", err)
 				}
-				mkExportStreamingLocatorsClient, err := mkiosdk.NewStreamingLocatorsClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
+				mkExportStreamingLocatorsClient, err := mkiosdk.NewStreamingLocatorsClient(ctx, mkExportSubscription, mkToken, apiEndpoint, nil)
 				if err != nil {
 					log.Fatalf("error creating mk.io StreamingLocators Client: %v", err)
 				}
-				mkExportStreamingPoliciesClient, err := mkiosdk.NewStreamingPoliciesClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
+				mkExportStreamingPoliciesClient, err := mkiosdk.NewStreamingPoliciesClient(ctx, mkExportSubscription, mkToken, apiEndpoint, nil)
 				if err != nil {
 					log.Fatalf("error creating mk.io StreamingPolicies Client: %v", err)
 				}
-				mkExportStreamingEndpointsClient, err := mkiosdk.NewStreamingEndpointsClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
+				mkExportStreamingEndpointsClient, err := mkiosdk.NewStreamingEndpointsClient(ctx, mkExportSubscription, mkToken, apiEndpoint, nil)
 				if err != nil {
 					log.Fatalf("error creating mk.io StreamingEndpoints Client: %v", err)
 				}
-				mkExportContentKeyPoliciesClient, err := mkiosdk.NewContentKeyPoliciesClient(ctx, mkImportSubscription, mkToken, apiEndpoint, nil)
+				mkExportContentKeyPoliciesClient, err := mkiosdk.NewContentKeyPoliciesClient(ctx, mkExportSubscription, mkToken, apiEndpoint, nil)
 				if err != nil {
 					log.Fatalf("error creating mk.io ContentKeyPolicies Client: %v", err)
 				}

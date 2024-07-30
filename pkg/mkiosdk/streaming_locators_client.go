@@ -272,22 +272,41 @@ func (client *StreamingLocatorsClient) listPathsHandleResponse(resp *http.Respon
 // options - StreamingLocatorsClientListOptions contains the optional parameters for the StreamingLocatorsClient.List
 // method.
 func (client *StreamingLocatorsClient) List(ctx context.Context, options *armmediaservices.StreamingLocatorsClientListOptions) (armmediaservices.StreamingLocatorsClientListResponse, error) {
-	req, err := client.listCreateRequest(ctx, options)
-	if err != nil {
-		return armmediaservices.StreamingLocatorsClientListResponse{}, err
-	}
-	// Try to do request, handle retries if tooManyRequests
-	resp, err := client.DoRequestWithBackoff(req)
-	if err != nil {
-		// We hit some error we and failed retry loop. Return error
-		return armmediaservices.StreamingLocatorsClientListResponse{}, err
-	}
+	skipToken := ""
+	result := armmediaservices.StreamingLocatorsClientListResponse{}
+	for {
+		req, err := client.listCreateRequest(ctx, options, skipToken)
+		if err != nil {
+			return result, err
+		}
+		// Try to do request, handle retries if tooManyRequests
+		resp, err := client.DoRequestWithBackoff(req)
+		if err != nil {
+			// We hit some error we and failed retry loop. Return error
+			return result, err
+		}
 
-	return client.listHandleResponse(resp)
+		listResp, err := client.listHandleResponse(resp)
+		if err != nil {
+			return result, err
+		}
+
+		// Append the current page to the result
+		result.StreamingLocatorCollection.Value = append(result.StreamingLocatorCollection.Value, listResp.StreamingLocatorCollection.Value...)
+
+		if listResp.StreamingLocatorCollection.ODataNextLink == nil {
+			// No more pages. Break the loop
+			break
+		} else {
+			// Mor Pages, Update SkipToken
+			skipToken = strings.Split(*listResp.StreamingLocatorCollection.ODataNextLink, "skiptoken=")[1]
+		}
+	}
+	return result, nil
 }
 
 // listCreateRequest creates the ListPaths request.
-func (client *StreamingLocatorsClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingLocatorsClientListOptions) (*Request, error) {
+func (client *StreamingLocatorsClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingLocatorsClientListOptions, skipToken string) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingLocators"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -300,6 +319,9 @@ func (client *StreamingLocatorsClient) listCreateRequest(ctx context.Context, op
 
 	// Apply filters to query
 	filter := ""
+	if skipToken != "" {
+		filter = `$skiptoken=` + skipToken + "&"
+	}
 	if options.Filter != nil {
 		filter = `$filter=` + *options.Filter
 	}
