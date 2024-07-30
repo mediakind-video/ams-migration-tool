@@ -213,21 +213,38 @@ func (client *StreamingPoliciesClient) getHandleResponse(resp *http.Response) (a
 // If the operation fails it returns an *ResponseError type.
 // options - StreamingPoliciesClientListOptions contains the optional parameters for the StreamingPoliciesClient.List method.
 func (client *StreamingPoliciesClient) List(ctx context.Context, options *armmediaservices.StreamingPoliciesClientListOptions) (armmediaservices.StreamingPoliciesClientListResponse, error) {
-	req, err := client.listCreateRequest(ctx, options)
-	if err != nil {
-		return armmediaservices.StreamingPoliciesClientListResponse{}, err
+	skipToken := ""
+	results := armmediaservices.StreamingPoliciesClientListResponse{}
+
+	for {
+		req, err := client.listCreateRequest(ctx, options, skipToken)
+		if err != nil {
+			return results, err
+		}
+		// Try to do request, handle retries if tooManyRequests
+		resp, err := client.DoRequestWithBackoff(req)
+		if err != nil {
+			// We hit some error we and failed retry loop. Return error
+			return results, err
+		}
+		listResp, err := client.listHandleResponse(resp)
+		if err != nil {
+			return results, err
+		}
+		results.StreamingPolicyCollection.Value = append(results.StreamingPolicyCollection.Value, listResp.StreamingPolicyCollection.Value...)
+		if listResp.StreamingPolicyCollection.ODataNextLink == nil {
+			// No more pages. Break the loop
+			break
+		} else {
+			// Mor Pages, Update SkipToken
+			skipToken = strings.Split(*listResp.StreamingPolicyCollection.ODataNextLink, "skiptoken=")[1]
+		}
 	}
-	// Try to do request, handle retries if tooManyRequests
-	resp, err := client.DoRequestWithBackoff(req)
-	if err != nil {
-		// We hit some error we and failed retry loop. Return error
-		return armmediaservices.StreamingPoliciesClientListResponse{}, err
-	}
-	return client.listHandleResponse(resp)
+	return results, nil
 }
 
 // listCreateRequest creates the List request.
-func (client *StreamingPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingPoliciesClientListOptions) (*Request, error) {
+func (client *StreamingPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.StreamingPoliciesClientListOptions, skipToken string) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/streamingPolicies"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -240,6 +257,9 @@ func (client *StreamingPoliciesClient) listCreateRequest(ctx context.Context, op
 
 	// Apply filters to query
 	filter := ""
+	if skipToken != "" {
+		filter = `$skiptoken=` + skipToken + "&"
+	}
 	if options.Filter != nil {
 		filter = `$filter=` + *options.Filter
 	}

@@ -215,22 +215,42 @@ func (client *AssetsClient) getHandleResponse(resp *http.Response) (armmediaserv
 // If the operation fails it returns an *ResponseError type.
 // options - AssetClientGetOptions contains the optional parameters for the AssetClient.Get method.
 func (client *AssetsClient) List(ctx context.Context, options *armmediaservices.AssetsClientListOptions) (armmediaservices.AssetsClientListResponse, error) {
-	req, err := client.listCreateRequest(ctx, options)
-	if err != nil {
-		return armmediaservices.AssetsClientListResponse{}, err
+	skipToken := ""
+	results := armmediaservices.AssetsClientListResponse{}
+
+	for {
+		req, err := client.listCreateRequest(ctx, options, skipToken)
+		if err != nil {
+			return results, err
+		}
+
+		// Try to do request, handle retries if tooManyRequests
+		resp, err := client.DoRequestWithBackoff(req)
+		if err != nil {
+			return results, err
+		}
+
+		listResp, err := client.listHandleResponse(resp)
+		if err != nil {
+			return results, err
+		}
+		// Append the results to the response
+		results.AssetCollection.Value = append(results.AssetCollection.Value, listResp.AssetCollection.Value...)
+
+		if listResp.AssetCollection.ODataNextLink == nil {
+			// No more pages. Break the loop
+			break
+		} else {
+			// Mor Pages, Update SkipToken
+			skipToken = strings.Split(*listResp.AssetCollection.ODataNextLink, "skiptoken=")[1]
+		}
 	}
 
-	// Try to do request, handle retries if tooManyRequests
-	resp, err := client.DoRequestWithBackoff(req)
-	if err != nil {
-		return armmediaservices.AssetsClientListResponse{}, err
-	}
-
-	return client.listHandleResponse(resp)
+	return results, nil
 }
 
 // listCreateRequest creates the list request.
-func (client *AssetsClient) listCreateRequest(ctx context.Context, options *armmediaservices.AssetsClientListOptions) (*Request, error) {
+func (client *AssetsClient) listCreateRequest(ctx context.Context, options *armmediaservices.AssetsClientListOptions, skipToken string) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/assets"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -243,6 +263,9 @@ func (client *AssetsClient) listCreateRequest(ctx context.Context, options *armm
 
 	// Apply filters to query
 	filter := ""
+	if skipToken != "" {
+		filter = `$skiptoken=` + skipToken + "&"
+	}
 	if options.Filter != nil {
 		filter = `$filter=` + *options.Filter
 	}

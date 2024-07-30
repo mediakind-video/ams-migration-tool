@@ -268,22 +268,40 @@ func (client *ContentKeyPoliciesClient) getWithSecretsHandleResponse(resp *http.
 // If the operation fails it returns an *ResponseError type.
 // options - ContentKeyPoliciesClientListOptions contains the optional parameters for the ContentKeyPolicisClient.Get method.
 func (client *ContentKeyPoliciesClient) List(ctx context.Context, options *armmediaservices.ContentKeyPoliciesClientListOptions) (armmediaservices.ContentKeyPoliciesClientListResponse, error) {
-	req, err := client.listCreateRequest(ctx, options)
-	if err != nil {
-		return armmediaservices.ContentKeyPoliciesClientListResponse{}, err
-	}
+	skipToken := ""
+	results := armmediaservices.ContentKeyPoliciesClientListResponse{}
 
-	// Try to do request, handle retries if tooManyRequests
-	resp, err := client.DoRequestWithBackoff(req)
-	if err != nil {
-		return armmediaservices.ContentKeyPoliciesClientListResponse{}, err
-	}
+	for {
+		req, err := client.listCreateRequest(ctx, options, skipToken)
+		if err != nil {
+			return results, err
+		}
 
-	return client.listHandleResponse(resp)
+		// Try to do request, handle retries if tooManyRequests
+		resp, err := client.DoRequestWithBackoff(req)
+		if err != nil {
+			return results, err
+		}
+
+		listResp, err := client.listHandleResponse(resp)
+		if err != nil {
+			return results, err
+		}
+		results.ContentKeyPolicyCollection.Value = append(results.ContentKeyPolicyCollection.Value, listResp.ContentKeyPolicyCollection.Value...)
+
+		if listResp.ContentKeyPolicyCollection.ODataNextLink == nil {
+			// No more pages. Break the loop
+			break
+		} else {
+			// Mor Pages, Update SkipToken
+			skipToken = strings.Split(*listResp.ContentKeyPolicyCollection.ODataNextLink, "skiptoken=")[1]
+		}
+	}
+	return results, nil
 }
 
 // listCreateRequest creates the Get request.
-func (client *ContentKeyPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.ContentKeyPoliciesClientListOptions) (*Request, error) {
+func (client *ContentKeyPoliciesClient) listCreateRequest(ctx context.Context, options *armmediaservices.ContentKeyPoliciesClientListOptions, skipToken string) (*Request, error) {
 	urlPath := "/api/ams/{subscriptionName}/contentKeyPolicies"
 	if client.subscriptionName == "" {
 		return nil, errors.New("parameter client.subscriptionName cannot be empty")
@@ -296,6 +314,9 @@ func (client *ContentKeyPoliciesClient) listCreateRequest(ctx context.Context, o
 
 	// Apply filters to query
 	filter := ""
+	if skipToken != "" {
+		filter = `$skiptoken=` + skipToken + "&"
+	}
 	if options.Filter != nil {
 		filter = `$filter=` + *options.Filter
 	}
