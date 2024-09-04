@@ -24,6 +24,11 @@ type Request struct {
 	*http.Request
 }
 
+func (r Request) GetBody() (io.ReadCloser, error) {
+	r.body.Seek(0, 0)
+	return io.NopCloser(r.body), nil
+}
+
 func generateFilter(before string, after string) string {
 	filter := ""
 	// Handle after date
